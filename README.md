@@ -2,6 +2,14 @@
 
 # Melodarr - Self-hosted Music Discovery for Lidarr
 
+> **This is a fork of [oxon1um/melodarr](https://github.com/oxon1um/melodarr).** The upstream
+> project does not support running behind a reverse proxy on a subpath (e.g. `https://example.com/melodarr`),
+> because Next.js requires `basePath` to be baked into the build at compile time. This fork adds a
+> build-time `BASE_PATH` argument (see [Environment Variables](#environment-variables) and the
+> [Docker Hub publishing workflow](.github/workflows/docker-hub.yml)) so the image can be built to
+> serve correctly from a subpath. Images built from this fork are published to
+> [Docker Hub](https://hub.docker.com/r/fkurevija/melodarr) on every push to `main`.
+
 <!-- PROJECT SHIELDS -->
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
@@ -193,6 +201,26 @@ and Redis together.
 
 Additional Lidarr, optional Jellyfin login, and request settings can be configured in the admin
 panel or through environment variables. See `.env.example` for local development defaults.
+
+#### Reverse proxy subpath support (`BASE_PATH`, fork-only)
+
+To serve Melodarr from a subpath behind a reverse proxy (e.g. `https://example.com/melodarr`),
+build the image with the `BASE_PATH` build argument set:
+
+```sh
+docker build --build-arg BASE_PATH=/melodarr -t melodarr:local .
+```
+
+`BASE_PATH` must be set at **build time**, not as a container runtime environment variable —
+Next.js compiles `basePath` into the client and server bundles, so it cannot be changed by simply
+setting an environment variable on an already-built image. The Dockerfile also bakes the
+build-time value in as the runner stage's default `BASE_PATH` env var, because `next start`
+re-reads `next.config.ts` at server startup and needs a matching value to enforce
+basePath-prefixed routing; do not override `BASE_PATH` at container runtime unless it matches
+the value the image was built with. The Docker Hub images published by this fork's
+[`docker-hub.yml`](.github/workflows/docker-hub.yml) workflow are built with `BASE_PATH=/melodarr`
+by default (configurable via the repository's `BASE_PATH` Actions variable). Leave `BASE_PATH`
+unset to build for root-path (`/`) deployments, matching upstream behavior.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
