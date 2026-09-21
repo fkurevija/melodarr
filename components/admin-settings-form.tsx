@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { IconCheck, IconLink, IconSave } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/toast-provider";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 type SettingsPayload = {
   appUrl: string | null;
@@ -57,7 +58,7 @@ export function AdminSettingsForm() {
 
   useEffect(() => {
     const run = async () => {
-      const response = await fetch("/api/settings");
+      const response = await fetch(withBasePath("/api/settings"));
       const payload = (await response.json()) as {
         error?: string;
         config?: SettingsPayload;
@@ -93,7 +94,7 @@ export function AdminSettingsForm() {
   });
 
   const sendUpdate = async (extra?: { testJellyfin?: boolean; testLidarr?: boolean }) => {
-    const response = await fetch("/api/settings", {
+    const response = await fetch(withBasePath("/api/settings"), {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"
@@ -143,7 +144,7 @@ export function AdminSettingsForm() {
       return false;
     }
 
-    const response = await fetch("/api/auth/password", {
+    const response = await fetch(withBasePath("/api/auth/password"), {
       method: "PUT",
       headers: {
         "Content-Type": "application/json"

@@ -26,6 +26,9 @@ const contentSecurityPolicyReportOnly = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   typedRoutes: true,
+  env: {
+    NEXT_PUBLIC_BASE_PATH: basePath ?? ""
+  },
   ...(basePath ? { basePath, assetPrefix: basePath } : {}),
   async headers() {
     return [

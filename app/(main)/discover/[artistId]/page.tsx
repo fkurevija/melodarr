@@ -16,6 +16,7 @@ import {
 } from "@/lib/discover/release-browser";
 import { pickPreferredImageUrl, type ImageAsset } from "@/lib/image-selection";
 import { getSafeReturnPath } from "@/lib/navigation/return-path";
+import { withBasePath } from "@/lib/navigation/base-path";
 import { useProgressiveCount } from "@/lib/use-progressive-count";
 
 type ArtistDetails = {
@@ -139,7 +140,10 @@ function ArtistDetailContent({ artistId }: ArtistDetailContentProps) {
     const fetchArtist = async () => {
       try {
         // Build URL with query params
-        const url = new URL(`/api/search/artist/${encodeURIComponent(artistId)}`, window.location.origin);
+        const url = new URL(
+          withBasePath(`/api/search/artist/${encodeURIComponent(artistId)}`),
+          window.location.origin
+        );
         if (artistName) {
           url.searchParams.set("artistName", artistName);
         }
@@ -262,7 +266,7 @@ function ArtistDetailContent({ artistId }: ArtistDetailContentProps) {
   ) => {
     setSubmitting(key);
 
-    const response = await fetch("/api/requests", {
+    const response = await fetch(withBasePath("/api/requests"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

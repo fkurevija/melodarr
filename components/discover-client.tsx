@@ -17,6 +17,7 @@ import {
 } from "@/lib/discover/release-browser";
 import { pickPreferredImageUrl, type ImageAsset } from "@/lib/image-selection";
 import { useProgressiveCount } from "@/lib/use-progressive-count";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 type Artist = {
   artistName: string;
@@ -679,7 +680,7 @@ export function DiscoverClient({ homeData }: DiscoverClientProps) {
     searchAbortRef.current = abortController;
 
     try {
-      const response = await fetch(`/api/search/artists?q=${encodeURIComponent(trimmedTerm)}`, {
+      const response = await fetch(withBasePath(`/api/search/artists?q=${encodeURIComponent(trimmedTerm)}`), {
         signal: abortController.signal
       });
       const payload = (await response.json()) as DiscoveryResults & { error?: string };
@@ -881,7 +882,7 @@ export function DiscoverClient({ homeData }: DiscoverClientProps) {
     setSubmitting(key);
 
     try {
-      const response = await fetch("/api/requests", {
+      const response = await fetch(withBasePath("/api/requests"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json"

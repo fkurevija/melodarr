@@ -7,6 +7,7 @@ import { IconCheck, IconRefresh, IconX, IconAlbum, IconUser, IconTrash } from "@
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useToast } from "@/components/ui/toast-provider";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 type RequestItem = {
   id: string;
@@ -69,7 +70,7 @@ export function RequestsTable({ admin = false }: Props) {
       params.set("cursor", cursor);
     }
 
-    const response = await fetch(`/api/requests?${params.toString()}`);
+    const response = await fetch(withBasePath(`/api/requests?${params.toString()}`));
     const payload = (await response.json()) as RequestsPayload;
 
     if (!response.ok) {
@@ -123,7 +124,7 @@ export function RequestsTable({ admin = false }: Props) {
   const onModerate = async (id: string, action: "approve" | "reject") => {
     setActing(id);
 
-    const response = await fetch(`/api/requests/${id}`, {
+    const response = await fetch(withBasePath(`/api/requests/${id}`), {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json"
@@ -150,7 +151,7 @@ export function RequestsTable({ admin = false }: Props) {
     setActing(deleteId);
     setDeleteId(null);
 
-    const response = await fetch(`/api/requests/${deleteId}`, {
+    const response = await fetch(withBasePath(`/api/requests/${deleteId}`), {
       method: "DELETE"
     });
 

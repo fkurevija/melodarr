@@ -9,6 +9,7 @@ import { IconAlbum, IconDownload } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/toast-provider";
 import { pickPreferredImageUrl, type ImageAsset } from "@/lib/image-selection";
 import { getSafeReturnPath } from "@/lib/navigation/return-path";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 type AlbumDetails = {
   title: string;
@@ -94,7 +95,10 @@ function AlbumDetailContent({ artistId, albumId }: AlbumDetailContentProps) {
 
     const fetchAlbum = async () => {
       try {
-        const requestUrl = new URL(`/api/search/album/${encodeURIComponent(albumId)}`, window.location.origin);
+        const requestUrl = new URL(
+          withBasePath(`/api/search/album/${encodeURIComponent(albumId)}`),
+          window.location.origin
+        );
         if (artistNameParam) {
           requestUrl.searchParams.set("artistName", artistNameParam);
         }
@@ -148,7 +152,7 @@ function AlbumDetailContent({ artistId, albumId }: AlbumDetailContentProps) {
 
     setSubmitting(true);
 
-    const response = await fetch("/api/requests", {
+    const response = await fetch(withBasePath("/api/requests"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

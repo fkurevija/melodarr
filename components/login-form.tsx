@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { useToast } from "@/components/ui/toast-provider";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 type LoginProvider = "local" | "jellyfin";
 
@@ -29,7 +30,7 @@ export function LoginForm({ isHttps }: LoginFormProps) {
     event.preventDefault();
     setLoadingProvider(provider);
 
-    const response = await fetch("/api/auth/login", {
+    const response = await fetch(withBasePath("/api/auth/login"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

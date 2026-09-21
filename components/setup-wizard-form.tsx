@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/components/ui/toast-provider";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 type SetupState = {
   username: string;
@@ -32,7 +33,7 @@ export function SetupWizardForm() {
 
     setSaving(true);
 
-    const response = await fetch("/api/setup", {
+    const response = await fetch(withBasePath("/api/setup"), {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

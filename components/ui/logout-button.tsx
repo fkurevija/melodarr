@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { IconLogout } from "@/components/ui/icons";
 import { useToast } from "@/components/ui/toast-provider";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 const DEFAULT_LOGOUT_ERROR = "Could not log out. Please refresh and try again.";
 
@@ -24,7 +25,7 @@ export function LogoutButton() {
   const onLogout = async () => {
     setLoading(true);
     try {
-      const response = await fetch("/api/auth/logout", {
+      const response = await fetch(withBasePath("/api/auth/logout"), {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store"
