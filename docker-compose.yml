@@ -1,13 +1,13 @@
 services:
   app:
-    image: ghcr.io/oxon1um/melodarr:v0.1.0-alpha3
+    image: fkurevija/melodarr:latest
     build:
       context: .
       dockerfile: Dockerfile
       args:
         # BASE_PATH is baked into the build (Next.js requires it at compile time), so
         # `docker compose build` picks it up from this same .env file automatically.
-        BASE_PATH: ${BASE_PATH:-}
+        BASE_PATH: /melodarr
     restart: unless-stopped
     ports:
       - "30000:3000"
