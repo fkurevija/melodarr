@@ -205,19 +205,19 @@ panel or through environment variables. See `.env.example` for local development
 #### Reverse proxy subpath support (`BASE_PATH`, fork-only)
 
 To serve Melodarr from a subpath behind a reverse proxy (e.g. `https://example.com/melodarr`),
-build the image with the `BASE_PATH` build argument set:
+set `BASE_PATH` in your `.env` file (see `.env.example`) and run:
 
 ```sh
-docker build --build-arg BASE_PATH=/melodarr -t melodarr:local .
+docker compose build
+docker compose up -d
 ```
 
-`BASE_PATH` must be set at **build time**, not as a container runtime environment variable —
-Next.js compiles `basePath` into the client and server bundles, so it cannot be changed by simply
-setting an environment variable on an already-built image. The Dockerfile also bakes the
-build-time value in as the runner stage's default `BASE_PATH` env var, because `next start`
-re-reads `next.config.ts` at server startup and needs a matching value to enforce
-basePath-prefixed routing; do not override `BASE_PATH` at container runtime unless it matches
-the value the image was built with. The Docker Hub images published by this fork's
+`BASE_PATH` must be set at **build time**, not changed on a running container — Next.js compiles
+`basePath` into the client and server bundles, so `docker compose build` (not just `up`) is
+required whenever you add or change it. `docker-compose.yml` passes `BASE_PATH` from `.env` as a
+build argument only; you do not need to (and should not) also set it as a runtime environment
+variable, since the Dockerfile already bakes the build-time value into the image as its runtime
+default. The Docker Hub images published by this fork's
 [`docker-hub.yml`](.github/workflows/docker-hub.yml) workflow are built with `BASE_PATH=/melodarr`
 by default (configurable via the repository's `BASE_PATH` Actions variable). Leave `BASE_PATH`
 unset to build for root-path (`/`) deployments, matching upstream behavior.

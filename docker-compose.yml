@@ -16,9 +16,6 @@ services:
       REDIS_URL: redis://redis:6379
       # Generate a new secret with: openssl rand -hex 64
       SESSION_SECRET: ${SESSION_SECRET:-}
-      # Must match the BASE_PATH build arg above — next start re-reads this at
-      # startup and needs it to enforce basePath-prefixed routing.
-      BASE_PATH: ${BASE_PATH:-}
     depends_on:
       db:
         condition: service_started
