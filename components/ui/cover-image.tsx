@@ -1,7 +1,12 @@
 import type { ReactNode } from "react";
 import Image from "next/image";
+import { withBasePath } from "@/lib/navigation/base-path";
 
-export const isSignedProxyImageSrc = (src: string): boolean => src.startsWith("/api/image?");
+export const isSignedProxyImageSrc = (src: string): boolean =>
+  src === "/api/image?" ||
+  src.startsWith("/api/image?") ||
+  src === withBasePath("/api/image?") ||
+  src.startsWith(withBasePath("/api/image?"));
 
 type Props = {
   alt: string;

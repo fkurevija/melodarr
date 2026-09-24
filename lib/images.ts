@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { getRuntimeSecret } from "@/lib/runtime/secret";
 import type { ImageAsset } from "@/lib/image-selection";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 const IMAGE_ROUTE_PATH = "/api/image";
 const IMAGE_URL_TTL_SEC = 24 * 60 * 60;
@@ -57,7 +58,7 @@ export const buildSignedImageUrl = async (src?: string): Promise<string | undefi
     sig: signature
   });
 
-  return `${IMAGE_ROUTE_PATH}?${params.toString()}`;
+  return `${withBasePath(IMAGE_ROUTE_PATH)}?${params.toString()}`;
 };
 
 export const verifySignedImageParams = async (params: URLSearchParams): Promise<string | null> => {

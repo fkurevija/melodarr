@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/ui/logout-button";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 type User = {
   username: string;
@@ -66,7 +67,7 @@ export function AppHeader({ user }: Props) {
           className="flex shrink-0 items-center gap-2 rounded-lg font-brand text-2xl font-semibold tracking-tight text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
           href={"/discover" as Route}
         >
-          <Image src="/brands/melodarr.png" alt="" aria-hidden width={34} height={34} priority unoptimized />
+          <Image src={withBasePath("/brands/melodarr.png")} alt="" aria-hidden width={34} height={34} priority unoptimized />
           Melodarr
         </Link>
 
