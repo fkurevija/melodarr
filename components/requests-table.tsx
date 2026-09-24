@@ -203,7 +203,7 @@ export function RequestsTable({ admin = false }: Props) {
           </div>
           <p className="text-base font-medium text-muted">No requests yet</p>
           <p className="mt-1.5 text-sm text-muted">Find music you want and request it here.</p>
-          <Link href={withBasePath("/discover")} className="btn-primary mt-4 inline-flex">
+          <Link href="/discover" className="btn-primary mt-4 inline-flex">
             Browse Music
           </Link>
         </div>

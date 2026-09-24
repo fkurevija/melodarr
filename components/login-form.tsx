@@ -46,7 +46,7 @@ export function LoginForm({ isHttps }: LoginFormProps) {
       return;
     }
 
-    router.replace(withBasePath("/discover"));
+    router.replace("/discover");
     router.refresh();
   };
 

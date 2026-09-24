@@ -2,7 +2,6 @@ import { redirect } from "next/navigation";
 import { isAppInitialized } from "@/lib/app-state";
 import { getCurrentUser } from "@/lib/auth/server";
 import { SetupWizardForm } from "@/components/setup-wizard-form";
-import { withBasePath } from "@/lib/navigation/base-path";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +10,7 @@ export default async function SetupPage() {
   const user = await getCurrentUser();
 
   if (initialized) {
-    redirect(withBasePath(user ? "/discover" : "/login"));
+    redirect(user ? "/discover" : "/login");
   }
 
   return (

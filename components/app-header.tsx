@@ -65,7 +65,7 @@ export function AppHeader({ user }: Props) {
       <div className="mx-auto flex w-full max-w-[min(1600px,calc(100vw-1.5rem))] flex-wrap items-center gap-3 px-4 sm:max-w-[min(1720px,calc(100vw-3rem))] sm:px-6">
         <Link
           className="flex shrink-0 items-center gap-2 rounded-lg font-brand text-2xl font-semibold tracking-tight text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          href={withBasePath("/discover") as Route}
+          href={"/discover" as Route}
         >
           <Image src={withBasePath("/brands/melodarr.png")} alt="" aria-hidden width={34} height={34} priority unoptimized />
           Melodarr
@@ -80,7 +80,7 @@ export function AppHeader({ user }: Props) {
               {navItems.map(({ href, label }) => (
                 <Link
                   key={href}
-                  href={withBasePath(href) as Route}
+                  href={href}
                   aria-current={isActive(href) ? "page" : undefined}
                   className={`rounded-lg px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     isActive(href)
@@ -124,7 +124,7 @@ export function AppHeader({ user }: Props) {
                 {navItems.map(({ href, label }) => (
                   <Link
                     key={href}
-                    href={withBasePath(href) as Route}
+                    href={href}
                     onClick={() => setMobileMenuOpen(false)}
                     aria-current={isActive(href) ? "page" : undefined}
                     className={`flex min-h-11 items-center rounded-xl px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${

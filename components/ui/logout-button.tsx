@@ -37,7 +37,7 @@ export function LogoutButton() {
         return;
       }
 
-      router.replace(withBasePath("/login"));
+      router.replace("/login");
       router.refresh();
     } catch {
       toast.error(DEFAULT_LOGOUT_ERROR, "Logout");
