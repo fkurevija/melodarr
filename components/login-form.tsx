@@ -46,7 +46,7 @@ export function LoginForm({ isHttps }: LoginFormProps) {
       return;
     }
 
-    router.replace("/discover");
+    router.replace(withBasePath("/discover"));
     router.refresh();
   };
 
@@ -59,7 +59,7 @@ export function LoginForm({ isHttps }: LoginFormProps) {
               <div className="absolute inset-0 blur-2xl bg-accent/20" />
               <Image
                 className="relative h-20 w-20"
-                src="/brands/melodarr.svg"
+                src={withBasePath("/brands/melodarr.svg")}
                 alt=""
                 aria-hidden
                 width={80}
@@ -137,7 +137,7 @@ export function LoginForm({ isHttps }: LoginFormProps) {
             <div className="absolute inset-0 blur-2xl bg-accent/20" />
             <Image
               className="relative h-20 w-20"
-              src="/brands/melodarr.svg"
+              src={withBasePath("/brands/melodarr.svg")}
               alt=""
               aria-hidden
               width={80}
@@ -166,7 +166,7 @@ export function LoginForm({ isHttps }: LoginFormProps) {
         >
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl brand-jellyfin-icon" aria-label="Jellyfin">
-              <Image src="/brands/jellyfin.svg" alt="" aria-hidden width={22} height={22} />
+              <Image src={withBasePath("/brands/jellyfin.svg")} alt="" aria-hidden width={22} height={22} />
             </div>
             <div>
               <h2 className="section-heading">Jellyfin</h2>

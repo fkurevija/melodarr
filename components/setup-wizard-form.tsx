@@ -52,7 +52,7 @@ export function SetupWizardForm() {
       return;
     }
 
-    router.replace("/admin/settings");
+    router.replace(withBasePath("/admin/settings"));
     router.refresh();
   };
 
