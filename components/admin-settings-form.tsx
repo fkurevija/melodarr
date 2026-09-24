@@ -258,7 +258,7 @@ export function AdminSettingsForm() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl brand-jellyfin-icon" aria-label="Jellyfin">
-                  <Image src={withBasePath("/brands/jellyfin.svg")} alt="" aria-hidden width={22} height={22} />
+                  <Image src="/brands/jellyfin.svg" alt="" aria-hidden width={22} height={22} />
                 </div>
                 <h2 className="section-heading leading-none">Jellyfin</h2>
               </div>
@@ -306,7 +306,7 @@ export function AdminSettingsForm() {
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl brand-lidarr-icon" aria-label="Lidarr">
-                  <Image src={withBasePath("/brands/lidarr.svg")} alt="" aria-hidden width={22} height={22} className="h-5 w-5" />
+                  <Image src="/brands/lidarr.svg" alt="" aria-hidden width={22} height={22} className="h-5 w-5" />
                 </div>
                 <h2 className="section-heading leading-none">Lidarr</h2>
               </div>
