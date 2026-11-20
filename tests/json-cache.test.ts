@@ -67,6 +67,28 @@ describe("json cache", () => {
     vi.useRealTimers();
   });
 
+  it("serves stale data immediately and refreshes it in the background", async () => {
+    redisMock.get.mockResolvedValue(null);
+
+    const { fromJsonCacheWithStale, clearJsonCache } = await import("../lib/cache/json-cache");
+    clearJsonCache();
+
+    const loader = vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce("old")
+      .mockResolvedValueOnce("new");
+
+    await expect(fromJsonCacheWithStale("lidarr:test", "stale", 20, 5_000, loader)).resolves.toBe("old");
+
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    const started = Date.now();
+    await expect(fromJsonCacheWithStale("lidarr:test", "stale", 20, 5_000, loader)).resolves.toBe("old");
+    expect(Date.now() - started).toBeLessThan(20);
+
+    await vi.waitFor(() => expect(loader).toHaveBeenCalledTimes(2));
+    await expect(fromJsonCacheWithStale("lidarr:test", "stale", 20, 5_000, loader)).resolves.toBe("new");
+  });
+
   it("invalidates a namespace by bumping its generation", async () => {
     let generation = 0;
     redisMock.get.mockImplementation(async (key: string) => {

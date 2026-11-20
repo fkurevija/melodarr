@@ -8,6 +8,17 @@ import { LidarrClient } from "@/lib/lidarr/client";
 import { prisma } from "@/lib/db/prisma";
 import { getRuntimeConfig, updateConfig } from "@/lib/settings/store";
 
+class ConnectionTestError extends Error {}
+
+const connectionTestMessage = (service: "Jellyfin" | "Lidarr", error: unknown): string => {
+  const detail = error instanceof Error ? error.message : "Unknown error";
+  if (detail.startsWith("fetch failed") || detail.toLowerCase().includes("timeout")) {
+    return `${service} did not respond within 5 seconds. Check the server URL and network access.`;
+  }
+
+  return `${service} connection test failed: ${detail.slice(0, 300)}`;
+};
+
 const settingsSchema = z.object({
   appUrl: z.string().url().nullable().optional(),
   jellyfinUrl: z.string().url().nullable().optional(),
@@ -135,7 +146,11 @@ export async function PUT(req: NextRequest) {
       }
 
       const jellyfin = new JellyfinClient(resolvedConfig.jellyfinUrl, resolvedConfig.jellyfinApiKey);
-      await jellyfin.healthCheck();
+      try {
+        await jellyfin.healthCheck();
+      } catch (error) {
+        throw new ConnectionTestError(connectionTestMessage("Jellyfin", error));
+      }
     }
 
     if (payload.testLidarr) {
@@ -147,11 +162,19 @@ export async function PUT(req: NextRequest) {
       }
 
       const lidarr = new LidarrClient(resolvedConfig.lidarrUrl, resolvedConfig.lidarrApiKey);
-      await lidarr.healthCheck();
+      try {
+        await lidarr.healthCheck();
+      } catch (error) {
+        throw new ConnectionTestError(connectionTestMessage("Lidarr", error));
+      }
     }
 
     return jsonOk({ ok: true });
   } catch (error) {
+    if (error instanceof ConnectionTestError) {
+      return jsonError(error.message, 502);
+    }
+
     if (error instanceof z.ZodError) {
       return jsonError(error.issues[0]?.message ?? "Invalid settings payload", 400);
     }

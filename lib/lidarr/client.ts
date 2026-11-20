@@ -1,4 +1,9 @@
-import { clearJsonCache, fromJsonCache, invalidateJsonCacheNamespace } from "@/lib/cache/json-cache";
+import {
+  clearJsonCache,
+  fromJsonCache,
+  fromJsonCacheWithStale,
+  invalidateJsonCacheNamespace
+} from "@/lib/cache/json-cache";
 import { getCoverFallbackImages } from "@/lib/metadata/covers";
 
 export type LidarrImage = {
@@ -100,15 +105,22 @@ type LidarrAlbum = {
   foreignAlbumId?: string;
   artistId?: number;
   monitored?: boolean;
-   albumType?: string;
-   releaseDate?: string;
-   added?: string;
+  albumType?: string;
+  releaseDate?: string;
+  added?: string;
   images?: LidarrImage[];
   statistics?: LidarrAlbumStatistics;
+  artistName?: string;
+  secondaryTypes?: string[];
+  releaseStatuses?: string[];
   artist?: {
     artistName?: string;
     foreignArtistId?: string;
   };
+};
+
+type CachedLibraryAlbum = LidarrArtistAlbum & {
+  added?: string;
 };
 
 type LidarrHistoryRecord = {
@@ -335,6 +347,27 @@ const normalizeLibraryAlbum = (raw: unknown): LidarrAlbum | null => {
           foreignArtistId: pickString(artist, "foreignArtistId")
         }
       : undefined
+  };
+};
+
+const fallbackLibraryAlbum = (raw: unknown): LidarrArtistAlbum | null => {
+  const album = normalizeLibraryAlbum(raw);
+  if (!album) return null;
+
+  return {
+    id: album.id,
+    title: album.title,
+    artistName: album.artist?.artistName ?? "Unknown artist",
+    foreignAlbumId: album.foreignAlbumId,
+    foreignArtistId: album.artist?.foreignArtistId,
+    artistId: album.artistId,
+    monitored: album.monitored,
+    type: album.albumType,
+    releaseGroup: normalizeReleaseGroup(album.albumType),
+    releaseDate: album.releaseDate,
+    images: album.images,
+    statistics: album.statistics,
+    artist: album.artist
   };
 };
 
@@ -906,7 +939,9 @@ const isReleaseAllowedByRules = (
 };
 
 export class LidarrClient {
-  private static readonly libraryCacheTtlMs = 30_000;
+  private static readonly libraryCacheTtlMs = 5 * 60_000;
+
+  private static readonly libraryCacheStaleMs = 30 * 60_000;
 
   private static readonly searchCacheTtlMs = 20_000;
 
@@ -941,6 +976,21 @@ export class LidarrClient {
 
   private async fromCache<T>(scope: string, ttlMs: number, loader: () => Promise<T>): Promise<T> {
     return LidarrClient.fromCache(this.getCacheNamespace(), scope, ttlMs, loader);
+  }
+
+  private fromCacheWithStale<T>(
+    scope: string,
+    ttlMs: number,
+    staleMs: number,
+    loader: () => Promise<T>
+  ): Promise<T> {
+    return fromJsonCacheWithStale(
+      this.getCacheNamespace(),
+      scope,
+      ttlMs,
+      staleMs,
+      loader
+    );
   }
 
   private async invalidateCaches(): Promise<void> {
@@ -1847,7 +1897,10 @@ export class LidarrClient {
   }
 
   async healthCheck(): Promise<void> {
-    await this.request<Record<string, unknown>>("/api/v1/system/status");
+    await this.request<Record<string, unknown>>(
+      "/api/v1/system/status",
+      this.getTimeoutInit(5_000)
+    );
   }
 
   async searchArtists(term: string): Promise<LidarrArtistSearchResult[]> {
@@ -2024,15 +2077,12 @@ export class LidarrClient {
     const rules = await this.getReleaseFilterRules(metadataProfileId);
 
 
-    const [allAlbumsRaw, searchAlbumsRaw] = await Promise.all([
-      this.tryRequest<unknown[]>("/api/v1/album"),
+    const [allAlbums, searchAlbumsRaw] = await Promise.all([
+      this.getAllAlbumsCached(),
       artistName
         ? this.tryRequest<unknown[]>(`/api/v1/album/lookup?term=${encodeURIComponent(artistName)}`)
         : Promise.resolve(null)
     ]);
-    const allAlbums = (allAlbumsRaw ?? [])
-      .map(normalizeArtistAlbum)
-      .filter((album): album is LidarrArtistAlbum => Boolean(album));
     const searchAlbums = (searchAlbumsRaw ?? [])
       .map(normalizeArtistAlbum)
       .filter((album): album is LidarrArtistAlbum => Boolean(album));
@@ -2342,31 +2392,76 @@ export class LidarrClient {
 
   async getAlbumFileCounts(albumIds: number[]): Promise<Record<number, number>> {
     const uniqueAlbumIds = [...new Set(albumIds.filter((albumId) => Number.isFinite(albumId)))];
+    const counts = new Array<readonly [number, number]>(uniqueAlbumIds.length);
+    let cursor = 0;
 
-    const counts = await Promise.all(
-      uniqueAlbumIds.map(async (albumId) => {
+    const worker = async () => {
+      while (cursor < uniqueAlbumIds.length) {
+        const index = cursor;
+        cursor += 1;
+        const albumId = uniqueAlbumIds[index];
         const trackfiles = await this.tryRequest<unknown[]>(`/api/v1/trackfile?albumId=${albumId}`);
-        return [albumId, trackfiles?.length ?? 0] as const;
-      })
+        counts[index] = [albumId, trackfiles?.length ?? 0];
+      }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(12, uniqueAlbumIds.length) }, () => worker())
     );
 
     return Object.fromEntries(counts);
   }
 
-  async getAllAlbums(): Promise<LidarrAlbum[]> {
-    const result = await this.fromCache(
-      "albums:normalized",
+  private async getAllAlbumsCached(): Promise<CachedLibraryAlbum[]> {
+    return this.fromCacheWithStale(
+      "albums:library-v2",
       LidarrClient.libraryCacheTtlMs,
+      LidarrClient.libraryCacheStaleMs,
       async () => {
         const raw = await this.tryRequest<unknown[]>("/api/v1/album");
         return (raw ?? [])
-          .map(normalizeLibraryAlbum)
-          .filter((album): album is LidarrAlbum => Boolean(album))
-          .map((album) => this.withTransformedImages(album));
+          .map((entry) => {
+            const album = normalizeArtistAlbum(entry) ?? fallbackLibraryAlbum(entry);
+            if (!album) {
+              return null;
+            }
+
+            const record = asRecord(entry);
+            return {
+              ...album,
+              added: pickString(record, "added", "dateAdded")
+            } as CachedLibraryAlbum;
+          })
+          .filter((album): album is CachedLibraryAlbum => Boolean(album));
       }
     );
+  }
 
-    return result ?? [];
+  async getAllAlbums(): Promise<LidarrAlbum[]> {
+    return this.fromCacheWithStale(
+      "albums:public-v2",
+      LidarrClient.libraryCacheTtlMs,
+      LidarrClient.libraryCacheStaleMs,
+      async () => {
+        const albums = await this.getAllAlbumsCached();
+        return albums.map((album) => ({
+          id: album.id,
+          title: album.title,
+          foreignAlbumId: album.foreignAlbumId,
+          artistId: album.artistId,
+          monitored: album.monitored,
+          albumType: album.type,
+          releaseDate: album.releaseDate,
+          added: album.added,
+          images: album.images,
+          statistics: album.statistics,
+          artistName: album.artistName,
+          secondaryTypes: album.secondaryTypes,
+          releaseStatuses: album.releaseStatuses,
+          artist: album.artist
+        }));
+      }
+    );
   }
 
   async getRecentImportedAlbums(windowMs: number): Promise<LidarrImportedAlbum[]> {
@@ -2430,11 +2525,8 @@ export class LidarrClient {
 
   async getExistingArtistAlbums(foreignArtistId: string): Promise<LidarrArtistAlbum[]> {
     // Check all albums in library regardless of whether artist was added
-    const allAlbums = await this.request<LidarrArtistAlbum[]>("/api/v1/album");
-
-    const filtered = allAlbums.filter((album) => album.foreignArtistId === foreignArtistId);
-
-    return filtered;
+    const allAlbums = await this.getAllAlbumsCached();
+    return allAlbums.filter((album) => album.foreignArtistId === foreignArtistId);
   }
 
   async getAlbumsByArtistId(artistId: number): Promise<LidarrArtistAlbum[]> {

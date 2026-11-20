@@ -77,6 +77,30 @@ let fetchMock: ReturnType<typeof vi.fn<(input: RequestInfo | URL, init?: Request
     expect(second).toBe(first);
   });
 
+  it("reuses one album-library fetch across lookup methods", async () => {
+    const albumFetch = vi.fn(() => Promise.resolve(jsonResponse([
+      {
+        id: 1,
+        title: "Album",
+        foreignAlbumId: "album-1",
+        images: [{ url: "/cover.jpg" }],
+        artist: { artistName: "Artist", foreignArtistId: "artist-1" }
+      }
+    ])));
+    fetchMock.mockImplementation((input: RequestInfo | URL) => {
+      if (String(input).endsWith("/api/v1/album")) return albumFetch();
+      return undefined;
+    });
+
+    const client = new LidarrClient("http://lidarr", "test-key");
+    const albums = await client.getAllAlbums();
+    const artistAlbums = await client.getExistingArtistAlbums("artist-1");
+
+    expect(albums).toHaveLength(1);
+    expect(artistAlbums).toHaveLength(1);
+    expect(albumFetch).toHaveBeenCalledTimes(1);
+  });
+
   it("keeps the existing album when lookup results do not match the requested foreign album id", async () => {
     fetchMock.mockImplementation((input: RequestInfo | URL) => {
       const url = String(input);

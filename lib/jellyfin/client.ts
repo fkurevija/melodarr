@@ -15,7 +15,8 @@ export class JellyfinClient {
     const response = await fetch(url, {
       headers: {
         "X-Emby-Token": this.apiKey
-      }
+      },
+      signal: AbortSignal.timeout(5_000)
     });
 
     if (!response.ok) {
