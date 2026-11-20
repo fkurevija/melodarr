@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createHash } from "crypto";
 import { Role, User } from "@prisma/client";
 import { cookies } from "next/headers";
@@ -8,7 +9,7 @@ import { SESSION_COOKIE } from "@/lib/auth/session";
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
 
-export const getCurrentUser = async (): Promise<User | null> => {
+export const getCurrentUser = cache(async (): Promise<User | null> => {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
@@ -26,7 +27,7 @@ export const getCurrentUser = async (): Promise<User | null> => {
   });
 
   return session?.user ?? null;
-};
+});
 
 export const requireCurrentUser = async (): Promise<User> => {
   const user = await getCurrentUser();

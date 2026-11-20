@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db/prisma";
 import { withOptimizedImageUrlsForMany } from "@/lib/images";
 import type { ImageAsset } from "@/lib/image-selection";
 import { LidarrClient } from "@/lib/lidarr/client";
-import { syncSubmittedAlbumRequests } from "@/lib/requests/service";
+import { syncSubmittedAlbumRequestsIfStale } from "@/lib/requests/service";
 import { getRuntimeConfig } from "@/lib/settings/store";
 
 const QUEUED_REQUEST_STATUSES: RequestStatus[] = [
@@ -188,11 +188,14 @@ const getLibrarySummary = async (lidarr: LidarrClient): Promise<DiscoverLibraryS
     };
   }
 
-  const fallbackFileCounts = await lidarr.getAlbumFileCounts(
-    libraryAlbums
-      .filter((album) => lidarr.albumNeedsFileCountFallback(album))
-      .map((album) => album.id)
-  );
+  const [fallbackFileCounts, recentImportedAlbums] = await Promise.all([
+    lidarr.getAlbumFileCounts(
+      libraryAlbums
+        .filter((album) => lidarr.albumNeedsFileCountFallback(album))
+        .map((album) => album.id)
+    ),
+    lidarr.getRecentImportedAlbums(FRESH_PICKS_WINDOW_MS)
+  ]);
 
   const availableAlbums = libraryAlbums.filter((album) =>
     lidarr.isAlbumFullyAvailable(album, fallbackFileCounts[album.id] ?? 0)
@@ -200,7 +203,7 @@ const getLibrarySummary = async (lidarr: LidarrClient): Promise<DiscoverLibraryS
   const freshPicks = getFreshPickEntries(
     lidarr,
     availableAlbums,
-    await lidarr.getRecentImportedAlbums(FRESH_PICKS_WINDOW_MS)
+    recentImportedAlbums
   );
 
   const freshThisWeek = freshPicks.slice(0, FRESH_THIS_WEEK_LIMIT);
@@ -232,10 +235,11 @@ export const getDiscoverHomeData = async (): Promise<DiscoverHomeData> => {
       return getUnavailableDiscoverHomeData(await getQueuedRequestCount());
     }
 
-    await syncSubmittedAlbumRequests();
+    const [librarySummary] = await Promise.all([
+      getLibrarySummary(lidarr),
+      syncSubmittedAlbumRequestsIfStale()
+    ]);
     const queuedRequestCount = await getQueuedRequestCount();
-
-    const librarySummary = await getLibrarySummary(lidarr);
 
     return {
       ...librarySummary,

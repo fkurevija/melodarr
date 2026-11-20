@@ -2355,15 +2355,18 @@ export class LidarrClient {
 
   async getAllAlbums(): Promise<LidarrAlbum[]> {
     const result = await this.fromCache(
-      "albums",
+      "albums:normalized",
       LidarrClient.libraryCacheTtlMs,
-      async () => this.tryRequest<unknown[]>("/api/v1/album")
+      async () => {
+        const raw = await this.tryRequest<unknown[]>("/api/v1/album");
+        return (raw ?? [])
+          .map(normalizeLibraryAlbum)
+          .filter((album): album is LidarrAlbum => Boolean(album))
+          .map((album) => this.withTransformedImages(album));
+      }
     );
 
-    return (result ?? [])
-      .map(normalizeLibraryAlbum)
-      .filter((album): album is LidarrAlbum => Boolean(album))
-      .map((album) => this.withTransformedImages(album));
+    return result ?? [];
   }
 
   async getRecentImportedAlbums(windowMs: number): Promise<LidarrImportedAlbum[]> {

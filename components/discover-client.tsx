@@ -60,6 +60,10 @@ type DiscoverHistoryState = {
 };
 
 const DISCOVER_SNAPSHOT_STORAGE_KEY = "melodarr:discover-snapshot";
+const MAX_STORED_DISCOVER_SNAPSHOTS = 20;
+
+let cachedSnapshotsRaw: string | null = null;
+let cachedSnapshots: Record<string, DiscoverHistoryState["discoverSnapshot"]> = {};
 
 type ArtistRouteInput = {
   artistName: string;
@@ -168,10 +172,19 @@ const readStoredDiscoverSnapshots = (): Record<string, DiscoverHistoryState["dis
   try {
     const raw = window.sessionStorage.getItem(DISCOVER_SNAPSHOT_STORAGE_KEY);
     if (!raw) {
+      cachedSnapshotsRaw = null;
+      cachedSnapshots = {};
       return {};
     }
 
-    return JSON.parse(raw) as Record<string, DiscoverHistoryState["discoverSnapshot"]>;
+    if (raw === cachedSnapshotsRaw) {
+      return { ...cachedSnapshots };
+    }
+
+    const parsed = JSON.parse(raw) as Record<string, DiscoverHistoryState["discoverSnapshot"]>;
+    cachedSnapshotsRaw = raw;
+    cachedSnapshots = parsed;
+    return { ...parsed };
   } catch {
     return {};
   }
@@ -183,7 +196,11 @@ const writeStoredDiscoverSnapshots = (snapshots: Record<string, DiscoverHistoryS
   }
 
   try {
-    window.sessionStorage.setItem(DISCOVER_SNAPSHOT_STORAGE_KEY, JSON.stringify(snapshots));
+    const entries = Object.entries(snapshots);
+    const boundedSnapshots = entries.length > MAX_STORED_DISCOVER_SNAPSHOTS
+      ? Object.fromEntries(entries.slice(-MAX_STORED_DISCOVER_SNAPSHOTS))
+      : snapshots;
+    window.sessionStorage.setItem(DISCOVER_SNAPSHOT_STORAGE_KEY, JSON.stringify(boundedSnapshots));
   } catch {
     // Ignore storage write failures.
   }
@@ -193,8 +210,14 @@ const storeDiscoverSnapshot = (href: string, snapshot?: DiscoverHistoryState["di
   const snapshots = readStoredDiscoverSnapshots();
 
   if (snapshot) {
+    if (JSON.stringify(snapshots[href]) === JSON.stringify(snapshot)) {
+      return;
+    }
     snapshots[href] = snapshot;
   } else {
+    if (!(href in snapshots)) {
+      return;
+    }
     delete snapshots[href];
   }
 
@@ -919,10 +942,16 @@ export function DiscoverClient({ homeData }: DiscoverClientProps) {
     }
   };
 
+  const displayedAlbums = useMemo(() => sortReleases(results.albums, sort), [results.albums, sort]);
+  const displayedSingles = useMemo(
+    () => filterNoisySingles(sortReleases(results.singles, sort)),
+    [results.singles, sort]
+  );
+
   const releasesByArtist = useMemo(() => {
     const map = new Map<string, Album[]>();
 
-    for (const album of [...sortReleases(results.albums, sort), ...filterNoisySingles(sortReleases(results.singles, sort))]) {
+    for (const album of [...displayedAlbums, ...displayedSingles]) {
       const key = album.foreignArtistId ?? album.artistName.toLowerCase();
       const current = map.get(key) ?? [];
       current.push(album);
@@ -930,35 +959,41 @@ export function DiscoverClient({ homeData }: DiscoverClientProps) {
     }
 
     return map;
-  }, [results.albums, results.singles, sort]);
+  }, [displayedAlbums, displayedSingles]);
 
-  const getArtistReleases = useCallback((artist: Artist): Album[] => {
-    const merged = [
-      ...(artist.foreignArtistId ? releasesByArtist.get(artist.foreignArtistId) ?? [] : []),
-      ...(releasesByArtist.get(artist.artistName.toLowerCase()) ?? [])
-    ];
+  const artistReleasesByKey = useMemo(() => {
+    const map = new Map<string, Album[]>();
 
-    const deduped = new Map<string, Album>();
-    for (const release of merged) {
-      deduped.set(albumKey({
-        foreignAlbumId: release.foreignAlbumId,
-        artistName: release.artistName,
-        title: release.title
-      }), release);
+    for (const artist of results.artists) {
+      const key = artistKey(artist);
+      if (map.has(key)) {
+        continue;
+      }
+
+      const merged = [
+        ...(artist.foreignArtistId ? releasesByArtist.get(artist.foreignArtistId) ?? [] : []),
+        ...(releasesByArtist.get(artist.artistName.toLowerCase()) ?? [])
+      ];
+
+      const deduped = new Map<string, Album>();
+      for (const release of merged) {
+        deduped.set(albumKey(release), release);
+      }
+
+      map.set(key, [...deduped.values()]);
     }
 
-    return [...deduped.values()];
-  }, [releasesByArtist]);
+    return map;
+  }, [releasesByArtist, results.artists]);
+
+  const getArtistReleases = useCallback(
+    (artist: Artist): Album[] => artistReleasesByKey.get(artistKey(artist)) ?? [],
+    [artistReleasesByKey]
+  );
 
   const filteredArtists = useMemo(
     () => results.artists.filter((artist) => hasRenderableArtistCard(artist, getArtistReleases(artist))),
     [getArtistReleases, results.artists]
-  );
-
-  const displayedAlbums = useMemo(() => sortReleases(results.albums, sort), [results.albums, sort]);
-  const displayedSingles = useMemo(
-    () => filterNoisySingles(sortReleases(results.singles, sort)),
-    [results.singles, sort]
   );
 
   const counts = useMemo(

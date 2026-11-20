@@ -6,6 +6,7 @@ const prismaRequest = {
 
 const getRuntimeConfig = vi.fn();
 const syncSubmittedAlbumRequests = vi.fn();
+const syncSubmittedAlbumRequestsIfStale = vi.fn();
 const withOptimizedImageUrlsForMany = vi.fn(async <T>(items: T[]) => items);
 
 const clientInstance = {
@@ -32,7 +33,8 @@ vi.mock("@/lib/settings/store", () => ({
 }));
 
 vi.mock("@/lib/requests/service", () => ({
-  syncSubmittedAlbumRequests
+  syncSubmittedAlbumRequests,
+  syncSubmittedAlbumRequestsIfStale
 }));
 
 vi.mock("@/lib/images", () => ({
@@ -44,21 +46,29 @@ vi.mock("@/lib/lidarr/client", () => ({
 }));
 
 describe("getDiscoverHomeData", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    clientInstance.getAlbumFileCounts.mockResolvedValue({});
-    clientInstance.albumNeedsFileCountFallback.mockReturnValue(false);
-  });
-
-  it("uses recent imported history for fresh picks and syncs submitted requests before counting queue", async () => {
-    const callOrder: string[] = [];
-    const importedAt = new Date(Date.now() - 60_000).toISOString();
-
+  const configureLidarr = () => {
     getRuntimeConfig.mockResolvedValue({
       lidarrUrl: "http://lidarr",
       lidarrApiKey: "test-key"
     });
     clientInstance.isAvailable.mockResolvedValue(true);
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    clientInstance.getAlbumFileCounts.mockResolvedValue({});
+    clientInstance.albumNeedsFileCountFallback.mockReturnValue(false);
+    clientInstance.getAllAlbums.mockResolvedValue([]);
+    clientInstance.getRecentImportedAlbums.mockResolvedValue([]);
+    syncSubmittedAlbumRequestsIfStale.mockResolvedValue([]);
+    prismaRequest.count.mockResolvedValue(0);
+  });
+
+  it("uses cooldown-capped sync and counts the queue after it completes", async () => {
+    const callOrder: string[] = [];
+    const importedAt = new Date(Date.now() - 60_000).toISOString();
+
+    configureLidarr();
     clientInstance.getAllAlbums.mockResolvedValue([
       {
         id: 99,
@@ -103,7 +113,7 @@ describe("getDiscoverHomeData", () => {
         importedAt
       }
     ]);
-    syncSubmittedAlbumRequests.mockImplementation(async () => {
+    syncSubmittedAlbumRequestsIfStale.mockImplementation(async () => {
       callOrder.push("sync");
       return ["request-1"];
     });
@@ -115,7 +125,8 @@ describe("getDiscoverHomeData", () => {
     const { getDiscoverHomeData } = await import("../lib/discover/home");
     const result = await getDiscoverHomeData();
 
-    expect(syncSubmittedAlbumRequests).toHaveBeenCalledTimes(1);
+    expect(syncSubmittedAlbumRequests).not.toHaveBeenCalled();
+    expect(syncSubmittedAlbumRequestsIfStale).toHaveBeenCalledTimes(1);
     expect(callOrder).toEqual(["sync", "count"]);
     expect(result.queuedRequestCount).toBe(0);
     expect(result.readyToPlayCount).toBe(1);
@@ -130,6 +141,78 @@ describe("getDiscoverHomeData", () => {
     ]);
   });
 
+  it("starts library loading while request sync is still in flight", async () => {
+    configureLidarr();
+
+    let resolveSync!: (value: string[]) => void;
+    let resolveAlbums!: (value: unknown[]) => void;
+    const libraryStart = vi.fn();
+
+    syncSubmittedAlbumRequestsIfStale.mockImplementation(() =>
+      new Promise<string[]>((resolve) => {
+        resolveSync = resolve;
+      })
+    );
+    clientInstance.getAllAlbums.mockImplementation(() => {
+      libraryStart();
+      return new Promise<unknown[]>((resolve) => {
+        resolveAlbums = resolve;
+      });
+    });
+
+    const { getDiscoverHomeData } = await import("../lib/discover/home");
+    const pending = getDiscoverHomeData();
+
+    await vi.waitFor(() => {
+      expect(libraryStart).toHaveBeenCalledTimes(1);
+    });
+    expect(prismaRequest.count).not.toHaveBeenCalled();
+
+    resolveAlbums([]);
+    resolveSync([]);
+    await pending;
+
+    expect(prismaRequest.count).toHaveBeenCalledTimes(1);
+  });
+
+  it("fetches file-count fallbacks and import history in parallel", async () => {
+    configureLidarr();
+    clientInstance.getAllAlbums.mockResolvedValue([
+      { id: 7, title: "No statistics" }
+    ]);
+    clientInstance.albumNeedsFileCountFallback.mockReturnValue(true);
+
+    let resolveCounts!: (value: Record<number, number>) => void;
+    let resolveHistory!: (value: unknown[]) => void;
+    const countsStart = vi.fn();
+    const historyStart = vi.fn();
+
+    clientInstance.getAlbumFileCounts.mockImplementation(() => {
+      countsStart();
+      return new Promise<Record<number, number>>((resolve) => {
+        resolveCounts = resolve;
+      });
+    });
+    clientInstance.getRecentImportedAlbums.mockImplementation(() => {
+      historyStart();
+      return new Promise<unknown[]>((resolve) => {
+        resolveHistory = resolve;
+      });
+    });
+
+    const { getDiscoverHomeData } = await import("../lib/discover/home");
+    const pending = getDiscoverHomeData();
+
+    await vi.waitFor(() => {
+      expect(countsStart).toHaveBeenCalledTimes(1);
+      expect(historyStart).toHaveBeenCalledTimes(1);
+    });
+
+    resolveCounts({});
+    resolveHistory([]);
+    await pending;
+  });
+
   it("returns unavailable state with queued count when Lidarr cannot be reached", async () => {
     getRuntimeConfig.mockResolvedValue({
       lidarrUrl: "http://lidarr",
@@ -141,7 +224,7 @@ describe("getDiscoverHomeData", () => {
     const { getDiscoverHomeData } = await import("../lib/discover/home");
     const result = await getDiscoverHomeData();
 
-    expect(syncSubmittedAlbumRequests).not.toHaveBeenCalled();
+    expect(syncSubmittedAlbumRequestsIfStale).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       freshPickCount: 0,
       queuedRequestCount: 2,

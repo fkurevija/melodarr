@@ -8,7 +8,9 @@ type CacheEntry = {
 const memoryStore = new Map<string, CacheEntry>();
 const inFlightStore = new Map<string, Promise<unknown>>();
 const fallbackGenerationStore = new Map<string, number>();
+const EXPIRED_ENTRY_SWEEP_INTERVAL = 64;
 let localCacheEpoch = 0;
+let setsSinceSweep = 0;
 
 const getGenerationKey = (namespace: string) => `cachegen:${namespace}`;
 
@@ -40,11 +42,26 @@ const getCachedMemoryValue = <T>(key: string): T | undefined => {
   return cached.value as T;
 };
 
+const sweepExpiredMemoryEntries = () => {
+  const now = Date.now();
+  for (const [key, entry] of memoryStore) {
+    if (entry.expiresAt <= now) {
+      memoryStore.delete(key);
+    }
+  }
+};
+
 const setCachedMemoryValue = (key: string, value: unknown, ttlMs: number) => {
   memoryStore.set(key, {
     expiresAt: Date.now() + ttlMs,
     value
   });
+
+  setsSinceSweep += 1;
+  if (setsSinceSweep >= EXPIRED_ENTRY_SWEEP_INTERVAL) {
+    setsSinceSweep = 0;
+    sweepExpiredMemoryEntries();
+  }
 };
 
 const getFallbackGeneration = (namespace: string) =>
@@ -112,6 +129,11 @@ export const clearJsonCache = (): void => {
   inFlightStore.clear();
   fallbackGenerationStore.clear();
   localCacheEpoch += 1;
+  setsSinceSweep = 0;
+};
+
+export const __jsonCacheTestUtils = {
+  getMemoryStoreSize: (): number => memoryStore.size
 };
 
 export const invalidateJsonCacheNamespace = async (namespace: string): Promise<void> => {

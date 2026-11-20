@@ -44,4 +44,26 @@ describe("discover landing state", () => {
     expect(source).toContain('{homeData.libraryStatus !== "connected" ? (');
     expect(source).toContain("{getDiscoverHomeEmptyCopy(homeData.libraryStatus)}");
   });
+
+  it("bounds stored discover snapshots and skips redundant storage writes", async () => {
+    const source = await readFile(
+      new URL("../components/discover-client.tsx", import.meta.url),
+      "utf8"
+    );
+
+    expect(source).toContain("MAX_STORED_DISCOVER_SNAPSHOTS = 20");
+    expect(source).toContain("entries.slice(-MAX_STORED_DISCOVER_SNAPSHOTS)");
+    expect(source).toContain('JSON.stringify(snapshots[href]) === JSON.stringify(snapshot)');
+  });
+
+  it("reuses the parsed snapshot blob until the stored value changes", async () => {
+    const source = await readFile(
+      new URL("../components/discover-client.tsx", import.meta.url),
+      "utf8"
+    );
+
+    expect(source).toContain("cachedSnapshotsRaw");
+    expect(source).toContain("raw === cachedSnapshotsRaw");
+    expect(source).toContain("return { ...cachedSnapshots };");
+  });
 });

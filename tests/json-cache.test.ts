@@ -43,6 +43,30 @@ describe("json cache", () => {
     expect(redisMock.set).toHaveBeenCalled();
   });
 
+  it("reclaims expired entries that are never read again", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    redisMock.get.mockResolvedValue(null);
+
+    const { fromJsonCache, __jsonCacheTestUtils } = await import("../lib/cache/json-cache");
+    const loader = vi.fn(async () => "reloaded");
+
+    for (let index = 0; index < 63; index += 1) {
+      await fromJsonCache("lidarr:test", `short-${index}`, 1, async () => index);
+    }
+    expect(__jsonCacheTestUtils.getMemoryStoreSize()).toBe(63);
+
+    vi.setSystemTime(10);
+    await fromJsonCache("lidarr:test", "trigger", 5_000, async () => "trigger");
+
+    expect(__jsonCacheTestUtils.getMemoryStoreSize()).toBe(1);
+
+    const result = await fromJsonCache("lidarr:test", "short-0", 5_000, loader);
+    expect(result).toBe("reloaded");
+    expect(loader).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
   it("invalidates a namespace by bumping its generation", async () => {
     let generation = 0;
     redisMock.get.mockImplementation(async (key: string) => {

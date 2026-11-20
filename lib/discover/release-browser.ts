@@ -32,9 +32,14 @@ const noisySinglePattern =
   /\b(remix|mix|edit|radio|demo|promo|promotional|interview|dub|club|version|acoustic|instrumental|live)\b/i;
 
 export const sortReleases = <T extends ReleaseLike>(releases: T[], sort: ReleaseSort): T[] => {
-  return [...releases].sort((left, right) => {
-    const leftTimestamp = getReleaseTimestamp(left.releaseDate);
-    const rightTimestamp = getReleaseTimestamp(right.releaseDate);
+  const decorated = releases.map((release) => ({
+    release,
+    timestamp: getReleaseTimestamp(release.releaseDate)
+  }));
+
+  decorated.sort((left, right) => {
+    const leftTimestamp = left.timestamp;
+    const rightTimestamp = right.timestamp;
     const leftHasDate = Number.isFinite(leftTimestamp);
     const rightHasDate = Number.isFinite(rightTimestamp);
 
@@ -48,13 +53,15 @@ export const sortReleases = <T extends ReleaseLike>(releases: T[], sort: Release
       }
     }
 
-    const titleComparison = compareByTitle(left.title, right.title);
+    const titleComparison = compareByTitle(left.release.title, right.release.title);
     if (titleComparison !== 0) {
       return sort === "za" ? -titleComparison : titleComparison;
     }
 
     return 0;
   });
+
+  return decorated.map((entry) => entry.release);
 };
 
 export const isNoisySingle = (release: ReleaseLike): boolean => {

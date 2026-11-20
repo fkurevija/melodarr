@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { filterNoisySingles, isNoisySingle, sortReleases } from "../lib/discover/release-browser";
 
 describe("release-browser utilities", () => {
@@ -30,6 +30,21 @@ describe("release-browser utilities", () => {
       "October",
       "Boy"
     ]);
+  });
+
+  it("parses each release date only once regardless of result count", () => {
+    const releases = Array.from({ length: 40 }, (_, index) => ({
+      title: `Album ${index}`,
+      releaseDate: `2020-01-${String((index % 28) + 1).padStart(2, "0")}`
+    }));
+
+    const parseSpy = vi.spyOn(Date, "parse");
+    try {
+      sortReleases(releases, "newest");
+      expect(parseSpy).toHaveBeenCalledTimes(releases.length);
+    } finally {
+      parseSpy.mockRestore();
+    }
   });
 
   it("filters noisy singles by default", () => {

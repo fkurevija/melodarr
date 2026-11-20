@@ -57,7 +57,22 @@ const fromAppConfig = async (config: AppConfig): Promise<RuntimeConfig> => {
   };
 };
 
-export const getRuntimeConfig = async (): Promise<RuntimeConfig> => {
+const RUNTIME_CONFIG_CACHE_TTL_MS = 10_000;
+
+type CachedRuntimeConfig = {
+  value: RuntimeConfig;
+  expiresAt: number;
+};
+
+let cachedRuntimeConfig: CachedRuntimeConfig | null = null;
+let pendingRuntimeConfig: Promise<RuntimeConfig> | null = null;
+
+export const invalidateRuntimeConfigCache = (): void => {
+  cachedRuntimeConfig = null;
+  pendingRuntimeConfig = null;
+};
+
+const loadRuntimeConfig = async (): Promise<RuntimeConfig> => {
   const persisted = await prisma.appConfig.findUnique({ where: { id: 1 } });
   const base = persisted ? await fromAppConfig(persisted) : defaultRuntimeConfig;
 
@@ -74,6 +89,31 @@ export const getRuntimeConfig = async (): Promise<RuntimeConfig> => {
     requestAutoApprove: env.requestAutoApprove ?? base.requestAutoApprove,
     debugMode: base.debugMode
   };
+};
+
+export const getRuntimeConfig = async (): Promise<RuntimeConfig> => {
+  const cached = cachedRuntimeConfig;
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+
+  if (pendingRuntimeConfig) {
+    return pendingRuntimeConfig;
+  }
+
+  pendingRuntimeConfig = loadRuntimeConfig()
+    .then((value) => {
+      cachedRuntimeConfig = {
+        value,
+        expiresAt: Date.now() + RUNTIME_CONFIG_CACHE_TTL_MS
+      };
+      return value;
+    })
+    .finally(() => {
+      pendingRuntimeConfig = null;
+    });
+
+  return pendingRuntimeConfig;
 };
 
 export type UpdateConfigInput = {
@@ -138,5 +178,6 @@ export const updateConfig = async (input: UpdateConfigInput): Promise<RuntimeCon
     data: updateData
   });
 
+  invalidateRuntimeConfigCache();
   return getRuntimeConfig();
 };
