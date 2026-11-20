@@ -5,6 +5,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { isAppInitialized } from "@/lib/app-state";
 import { prisma } from "@/lib/db/prisma";
+import { withBasePath } from "@/lib/navigation/base-path";
 import { SESSION_COOKIE } from "@/lib/auth/session";
 
 const hashToken = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -33,7 +34,7 @@ export const requireCurrentUser = async (): Promise<User> => {
   const user = await getCurrentUser();
   if (!user) {
     const initialized = await isAppInitialized();
-    redirect(initialized ? "/login" : "/setup");
+    redirect(withBasePath(initialized ? "/login" : "/setup"));
   }
 
   return user;
@@ -42,7 +43,7 @@ export const requireCurrentUser = async (): Promise<User> => {
 export const requireCurrentAdmin = async (): Promise<User> => {
   const user = await requireCurrentUser();
   if (user.role !== Role.ADMIN) {
-    redirect("/discover");
+    redirect(withBasePath("/discover"));
   }
 
   return user;

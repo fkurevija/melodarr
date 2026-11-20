@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Syne, DM_Sans, Fraunces } from "next/font/google";
 import { ToastProvider } from "@/components/ui/toast-provider";
+import { getBasePath } from "@/lib/navigation/base-path";
 import "@/styles/globals.css";
 
 const syne = Syne({
@@ -32,9 +33,16 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const basePath = getBasePath();
+
   return (
     <html lang="en">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.__MELODARR_BASE_PATH__=${JSON.stringify(basePath)};`
+          }}
+        />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>
       <body className={`${syne.variable} ${dmSans.variable} ${fraunces.variable}`}>

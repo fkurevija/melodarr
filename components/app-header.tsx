@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LogoutButton } from "@/components/ui/logout-button";
-import { withBasePath } from "@/lib/navigation/base-path";
+import { stripBasePath, withBasePath } from "@/lib/navigation/base-path";
 
 type User = {
   username: string;
@@ -49,11 +49,12 @@ export function AppHeader({ user }: Props) {
 
   // Active nav link helper
   const isActive = (href: string) => {
-    if (href === "/discover") return pathname === "/discover" || pathname.startsWith("/discover/");
-    if (href === "/requests") return pathname === "/requests";
-    if (href === "/admin/requests") return pathname === "/admin/requests";
-    if (href === "/admin/settings") return pathname === "/admin/settings";
-    return pathname === href;
+    const currentPath = stripBasePath(pathname);
+    if (href === "/discover") return currentPath === "/discover" || currentPath.startsWith("/discover/");
+    if (href === "/requests") return currentPath === "/requests";
+    if (href === "/admin/requests") return currentPath === "/admin/requests";
+    if (href === "/admin/settings") return currentPath === "/admin/settings";
+    return currentPath === href;
   };
 
   return (
@@ -65,7 +66,7 @@ export function AppHeader({ user }: Props) {
       <div className="mx-auto flex w-full max-w-[min(1600px,calc(100vw-1.5rem))] flex-wrap items-center gap-3 px-4 sm:max-w-[min(1720px,calc(100vw-3rem))] sm:px-6">
         <Link
           className="flex shrink-0 items-center gap-2 rounded-lg font-brand text-2xl font-semibold tracking-tight text-accent transition-colors hover:text-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-          href={"/discover" as Route}
+          href={withBasePath("/discover")}
         >
           <Image src={withBasePath("/brands/melodarr.png")} alt="" aria-hidden width={34} height={34} priority unoptimized />
           Melodarr
@@ -80,7 +81,7 @@ export function AppHeader({ user }: Props) {
               {navItems.map(({ href, label }) => (
                 <Link
                   key={href}
-                  href={href}
+                  href={withBasePath(href)}
                   aria-current={isActive(href) ? "page" : undefined}
                   className={`rounded-lg px-3 py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
                     isActive(href)
@@ -124,7 +125,7 @@ export function AppHeader({ user }: Props) {
                 {navItems.map(({ href, label }) => (
                   <Link
                     key={href}
-                    href={href}
+                    href={withBasePath(href)}
                     onClick={() => setMobileMenuOpen(false)}
                     aria-current={isActive(href) ? "page" : undefined}
                     className={`flex min-h-11 items-center rounded-xl px-3 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${

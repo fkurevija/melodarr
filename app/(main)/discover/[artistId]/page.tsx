@@ -349,7 +349,7 @@ function ArtistDetailContent({ artistId }: ArtistDetailContentProps) {
   if (viewMode !== "list") {
     artistParams.set("view", viewMode);
   }
-  const artistHref = (`/discover/${encodeURIComponent(artist.foreignArtistId ?? artistId)}?${artistParams.toString()}`) as Route;
+  const artistHref = withBasePath(`/discover/${encodeURIComponent(artist.foreignArtistId ?? artistId)}?${artistParams.toString()}` as Route);
   const releaseGridClassName =
     viewMode === "grid"
       ? ARTIST_RELEASE_GRID_CLASS_NAME
@@ -484,7 +484,7 @@ function ArtistDetailContent({ artistId }: ArtistDetailContentProps) {
               {visibleAlbums.map((album, index) => {
                 const key = albumKey(album);
                 const cover = chooseImage(album.images);
-                const albumDetailHref = `/discover/${encodeURIComponent(artist.foreignArtistId ?? artistId)}/${encodeURIComponent(album.foreignAlbumId ?? key)}?artistName=${encodeURIComponent(artist.artistName)}&from=${encodeURIComponent(artistHref)}` as const;
+                const albumDetailHref = withBasePath(`/discover/${encodeURIComponent(artist.foreignArtistId ?? artistId)}/${encodeURIComponent(album.foreignAlbumId ?? key)}?artistName=${encodeURIComponent(artist.artistName)}&from=${encodeURIComponent(artistHref)}` as Route);
 
                 return (
                   <Card
@@ -587,7 +587,7 @@ function ArtistDetailContent({ artistId }: ArtistDetailContentProps) {
               {visibleSingles.map((single, index) => {
                 const key = albumKey(single);
                 const cover = chooseImage(single.images);
-                const singleDetailHref = `/discover/${encodeURIComponent(artist.foreignArtistId ?? artistId)}/${encodeURIComponent(single.foreignAlbumId ?? key)}?artistName=${encodeURIComponent(artist.artistName)}&from=${encodeURIComponent(artistHref)}` as const;
+                const singleDetailHref = withBasePath(`/discover/${encodeURIComponent(artist.foreignArtistId ?? artistId)}/${encodeURIComponent(single.foreignAlbumId ?? key)}?artistName=${encodeURIComponent(artist.artistName)}&from=${encodeURIComponent(artistHref)}` as Route);
 
                 return (
                   <Card

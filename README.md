@@ -5,10 +5,10 @@
 > **This is a fork of [oxon1um/melodarr](https://github.com/oxon1um/melodarr).** The upstream
 > project does not support running behind a reverse proxy on a subpath (e.g. `https://example.com/melodarr`),
 > because Next.js requires `basePath` to be baked into the build at compile time. This fork adds a
-> build-time `BASE_PATH` argument (see [Environment Variables](#environment-variables) and the
-> [Docker Hub publishing workflow](.github/workflows/docker-hub.yml)) so the image can be built to
-> serve correctly from a subpath. Images built from this fork are published to
-> [Docker Hub](https://hub.docker.com/r/fkurevija/melodarr) on every push to `main`.
+> runtime `BASE_PATH` environment variable (see [Environment Variables](#environment-variables))
+> so the same image can serve from `/` or from a subpath without a rebuild. Images built from this
+> fork are published to [Docker Hub](https://hub.docker.com/r/fkurevija/melodarr) on every push to
+> `main`.
 
 <!-- PROJECT SHIELDS -->
 [![Contributors][contributors-shield]][contributors-url]
@@ -205,22 +205,34 @@ panel or through environment variables. See `.env.example` for local development
 #### Reverse proxy subpath support (`BASE_PATH`, fork-only)
 
 To serve Melodarr from a subpath behind a reverse proxy (e.g. `https://example.com/melodarr`),
-set `BASE_PATH` in your `.env` file (see `.env.example`) and run:
+set `BASE_PATH` in your `.env` file (see `.env.example`) and restart:
 
 ```sh
-docker compose build
 docker compose up -d
 ```
 
-`BASE_PATH` must be set at **build time**, not changed on a running container — Next.js compiles
-`basePath` into the client and server bundles, so `docker compose build` (not just `up`) is
-required whenever you add or change it. `docker-compose.yml` passes `BASE_PATH` from `.env` as a
-build argument only; you do not need to (and should not) also set it as a runtime environment
-variable, since the Dockerfile already bakes the build-time value into the image as its runtime
-default. The Docker Hub images published by this fork's
-[`docker-hub.yml`](.github/workflows/docker-hub.yml) workflow are built with `BASE_PATH=/melodarr`
-by default (configurable via the repository's `BASE_PATH` Actions variable). Leave `BASE_PATH`
-unset to build for root-path (`/`) deployments, matching upstream behavior.
+`BASE_PATH` is read at runtime, so no rebuild is needed. Leave it unset/empty to serve from
+`/`. The app prefixes its own links and API calls with the configured path and rewrites
+incoming prefixed requests internally.
+
+Next.js emits root-relative asset URLs (`/_next/...`), so on a shared host the reverse proxy
+must route both `/melodarr/*` and `/_next/*` to the container. For example, in Caddy:
+
+```caddyfile
+handle /melodarr/* {
+    reverse_proxy melodarr:3000
+}
+
+handle /_next/* {
+    reverse_proxy melodarr:3000
+}
+```
+
+If your proxy strips the prefix before forwarding (Caddy's `handle_path`), the app still
+receives unprefixed internal paths and works normally — but the browser's root-relative
+`/_next/*` requests still need to be routed to the container.
+Published images are built without a baked-in path, so the same image works at `/` or at any
+subpath; set the runtime env var to choose.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

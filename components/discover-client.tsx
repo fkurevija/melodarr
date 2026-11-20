@@ -156,12 +156,12 @@ const hasRenderableArtistCard = (artist: Artist, releases: Album[]): boolean =>
 
 export const buildArtistHref = ({ artistName, foreignArtistId, from }: ArtistRouteInput): Route | undefined =>
   foreignArtistId
-    ? (`/discover/${encodeURIComponent(foreignArtistId)}?artistName=${encodeURIComponent(artistName)}${from ? `&from=${encodeURIComponent(from)}` : ""}` as Route)
+    ? withBasePath(`/discover/${encodeURIComponent(foreignArtistId)}?artistName=${encodeURIComponent(artistName)}${from ? `&from=${encodeURIComponent(from)}` : ""}` as Route)
     : undefined;
 
 export const buildAlbumHref = ({ artistName, foreignArtistId, foreignAlbumId, from }: AlbumRouteInput): Route | undefined =>
   foreignArtistId && foreignAlbumId
-    ? (`/discover/${encodeURIComponent(foreignArtistId)}/${encodeURIComponent(foreignAlbumId)}?artistName=${encodeURIComponent(artistName)}${from ? `&from=${encodeURIComponent(from)}` : ""}` as Route)
+    ? withBasePath(`/discover/${encodeURIComponent(foreignArtistId)}/${encodeURIComponent(foreignAlbumId)}?artistName=${encodeURIComponent(artistName)}${from ? `&from=${encodeURIComponent(from)}` : ""}` as Route)
     : undefined;
 
 const readStoredDiscoverSnapshots = (): Record<string, DiscoverHistoryState["discoverSnapshot"]> => {
@@ -582,7 +582,7 @@ function DiscoverHomeSection({ homeData, discoverStateHref }: DiscoverHomeSectio
               </p>
             ) : null}
             {homeData.libraryStatus !== "connected" ? (
-              <Link href={"/admin/settings" as Route} className="btn-ghost mt-4 w-fit">
+              <Link href={withBasePath("/admin/settings")} className="btn-ghost mt-4 w-fit">
                 Review connection settings
               </Link>
             ) : null}

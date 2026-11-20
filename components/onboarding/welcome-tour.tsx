@@ -4,6 +4,7 @@ import type { Route } from "next";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { withBasePath } from "@/lib/navigation/base-path";
 
 const TOUR_KEY = "melodarr:welcome-tour-seen";
 const TOUR_STORAGE_EVENT = "melodarr:welcome-tour-change";
@@ -122,7 +123,7 @@ export function WelcomeTour() {
           {TOUR_STEPS.map((step, index) => (
             <Link
               key={step.id}
-              href={step.href as Route}
+              href={withBasePath(step.href)}
               onClick={dismiss}
               className="group flex items-start gap-4 rounded-2xl border border-[var(--edge)] bg-panel-2/40 p-4 transition-all hover:border-accent/30 hover:bg-panel-2/60"
             >

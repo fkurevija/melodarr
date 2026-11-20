@@ -1,12 +1,10 @@
 import type { NextConfig } from "next";
 
-// Optional subpath support for reverse proxy deployments (e.g. https://example.com/melodarr).
-// Next.js bakes basePath into the build output, so this must be set at build time
-// (via the BASE_PATH build arg / env var), not at container runtime.
+// Subpath support is resolved at runtime from BASE_PATH (see lib/navigation/base-path.ts
+// and middleware.ts). Next.js basePath/assetPrefix are intentionally NOT set here:
+// they would be baked into the client bundle and require a rebuild to change.
 const rawBasePath = process.env.BASE_PATH?.trim();
-const basePath = rawBasePath ? rawBasePath.replace(/\/+$/, "") : undefined;
-
-if (basePath && !basePath.startsWith("/")) {
+if (rawBasePath && !rawBasePath.replace(/\/+$/, "").startsWith("/")) {
   throw new Error(`BASE_PATH must start with "/" (received "${rawBasePath}")`);
 }
 
@@ -26,10 +24,6 @@ const contentSecurityPolicyReportOnly = [
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   typedRoutes: true,
-  env: {
-    NEXT_PUBLIC_BASE_PATH: basePath ?? ""
-  },
-  ...(basePath ? { basePath, assetPrefix: basePath } : {}),
   async headers() {
     return [
       {

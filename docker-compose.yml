@@ -4,14 +4,12 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      args:
-        # BASE_PATH is baked into the build (Next.js requires it at compile time), so
-        # `docker compose build` picks it up from this same .env file automatically.
-        BASE_PATH: /melodarr
     restart: unless-stopped
     ports:
       - "30000:3000"
     environment:
+      # Set BASE_PATH in .env (e.g. /melodarr) to serve from a subpath. No rebuild needed.
+      BASE_PATH: ${BASE_PATH:-}
       DATABASE_URL: postgresql://${POSTGRES_USER:-melodarr}:${POSTGRES_PASSWORD:-melodarr}@db:5432/${POSTGRES_DB:-melodarr}?schema=public
       REDIS_URL: redis://redis:6379
       # Generate a new secret with: openssl rand -hex 64

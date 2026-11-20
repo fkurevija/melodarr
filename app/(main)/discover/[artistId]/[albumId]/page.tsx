@@ -239,9 +239,9 @@ function AlbumDetailContent({ artistId, albumId }: AlbumDetailContentProps) {
   const releaseLabel = isSingle ? "Single" : "Album";
   const currentArtistId = album.foreignArtistId ?? artistId;
   const artistRoutePattern = new RegExp(`^/discover/${encodeURIComponent(currentArtistId)}(?:\\?.*)?$`);
-  const artistHref = artistRoutePattern.test(from ?? "")
+  const artistHref = withBasePath(artistRoutePattern.test(from ?? "")
     ? (from as Route)
-    : (`/discover/${encodeURIComponent(currentArtistId)}?artistName=${encodeURIComponent(artistNameParam ?? artistName)}${from ? `&from=${encodeURIComponent(from)}` : ""}` as Route);
+    : (`/discover/${encodeURIComponent(currentArtistId)}?artistName=${encodeURIComponent(artistNameParam ?? artistName)}${from ? `&from=${encodeURIComponent(from)}` : ""}` as Route));
 
   return (
     <div className="page-enter space-y-7">

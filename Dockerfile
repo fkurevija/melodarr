@@ -9,10 +9,7 @@ RUN npm ci --prefer-offline --no-audit --no-fund
 
 FROM deps AS builder
 COPY . .
-# Optional subpath support (e.g. /melodarr) for reverse proxy deployments.
-# Must be provided at build time since Next.js bakes basePath into the build output.
-ARG BASE_PATH=""
-ENV BASE_PATH=${BASE_PATH}
+# Subpath support is resolved at runtime from BASE_PATH; no build arg is needed.
 RUN npx prisma generate
 RUN npm run build
 RUN npm prune --omit=dev
@@ -21,13 +18,9 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-# `next start` re-reads next.config.ts at server startup (not just at build time), so the
-# same BASE_PATH used to build the client assets must also be present at runtime, or the
-# server won't enforce basePath-prefixed routing. Bake in the build-time value as the
-# container's default; it can still be overridden at runtime, but only to match a rebuild
-# with the same BASE_PATH — changing it without rebuilding will break static asset URLs.
-ARG BASE_PATH=""
-ENV BASE_PATH=${BASE_PATH}
+# BASE_PATH is read at runtime (empty = serve from "/"). Set it on `docker run`/compose
+# to serve from a subpath without rebuilding the image.
+ENV BASE_PATH=""
 RUN apk upgrade --no-cache openssl musl zlib
 
 COPY --from=builder /app/.next ./.next
