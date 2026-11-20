@@ -112,7 +112,10 @@ describe("cover fallback metadata", () => {
 
   it("caches empty fallback results", async () => {
     const { getCoverFallbackImages } = await import("../lib/metadata/covers");
-    const fetchJsonMock = vi.fn(async (): Promise<unknown> => null);
+    const fetchJsonMock = vi.fn(async (url: string): Promise<unknown> => {
+      expect(typeof url).toBe("string");
+      return null;
+    });
     const fetchJson: TestFetchJson = async <T>(url: string): Promise<T | null> =>
       (await fetchJsonMock(url)) as T | null;
 

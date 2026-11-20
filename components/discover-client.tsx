@@ -754,6 +754,7 @@ export function DiscoverClient({ homeData }: DiscoverClientProps) {
     }
   }, [buildDiscoverStateHref, filter, sort, toast, writeDiscoverHistory]);
 
+  /* eslint-disable react-hooks/set-state-in-effect -- URL and history snapshot are external stores; they must be copied into React state after mount. */
   useEffect(() => {
     const currentQuery = searchParams.get("q")?.trim() ?? "";
     const nextFilter = (() => {
@@ -799,6 +800,7 @@ export function DiscoverClient({ homeData }: DiscoverClientProps) {
     setResults(emptyResults);
     setIsHistoryReady(true);
   }, [buildDiscoverStateHref, filter, searchParams, sort]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   useEffect(() => {
     if (!isHistoryReady) {
