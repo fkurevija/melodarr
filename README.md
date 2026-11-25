@@ -2,13 +2,14 @@
 
 # Melodarr - Self-hosted Music Discovery for Lidarr
 
-> **This is a fork of [oxon1um/melodarr](https://github.com/oxon1um/melodarr).** The upstream
+> **This is a fork of [oxon1um/melodarr](https://github.com/oxon1um/melodarr), maintained at
+> [fkurevija/melodarr](https://github.com/fkurevija/melodarr).** The upstream
 > project does not support running behind a reverse proxy on a subpath (e.g. `https://example.com/melodarr`),
 > because Next.js requires `basePath` to be baked into the build at compile time. This fork adds a
 > runtime `BASE_PATH` environment variable (see [Environment Variables](#environment-variables))
 > so the same image can serve from `/` or from a subpath without a rebuild. Images built from this
-> fork are published to [Docker Hub](https://hub.docker.com/r/fkurevija/melodarr) on every push to
-> `main`.
+> repository are published to [Docker Hub](https://hub.docker.com/r/fkurevija/melodarr) on every
+> push to `main`.
 
 > **AI Disclosure:** Portions of this codebase, documentation, or tests were generated or refactored with the assistance of AI tools (e.g. GitHub Copilot, Claude, ChatGPT). All AI-generated outputs have been reviewed, tested, and verified by human maintainers.
 
@@ -28,15 +29,15 @@
     Jellyfin login.
     <br />
     <br />
-    <a href="https://github.com/oxon1um/melodarr">Repository</a>
+    <a href="https://github.com/fkurevija/melodarr">Repository</a>
     &middot;
-    <a href="https://github.com/oxon1um/melodarr/pkgs/container/melodarr">Container Image</a>
+    <a href="https://hub.docker.com/r/fkurevija/melodarr">Container Image</a>
     &middot;
-    <a href="https://github.com/oxon1um/melodarr/releases">Releases</a>
+    <a href="https://github.com/fkurevija/melodarr/releases">Releases</a>
     &middot;
-    <a href="https://github.com/oxon1um/melodarr/issues/new?labels=bug">Report Bug</a>
+    <a href="https://github.com/fkurevija/melodarr/issues/new?labels=bug">Report Bug</a>
     &middot;
-    <a href="https://github.com/oxon1um/melodarr/issues/new?labels=enhancement">Request Feature</a>
+    <a href="https://github.com/fkurevija/melodarr/issues/new?labels=enhancement">Request Feature</a>
   </p>
 </div>
 
@@ -106,10 +107,10 @@ Key features:
 
 | Resource | Link |
 |----------|------|
-| Source code | [github.com/oxon1um/melodarr](https://github.com/oxon1um/melodarr) |
-| Container image | [ghcr.io/oxon1um/melodarr](https://github.com/oxon1um/melodarr/pkgs/container/melodarr) |
-| Releases | [GitHub Releases](https://github.com/oxon1um/melodarr/releases) |
-| Issues and feature requests | [GitHub Issues](https://github.com/oxon1um/melodarr/issues) |
+| Source code | [github.com/fkurevija/melodarr](https://github.com/fkurevija/melodarr) |
+| Container image | [fkurevija/melodarr on Docker Hub](https://hub.docker.com/r/fkurevija/melodarr) |
+| Releases | [GitHub Releases](https://github.com/fkurevija/melodarr/releases) |
+| Issues and feature requests | [GitHub Issues](https://github.com/fkurevija/melodarr/issues) |
 
 Common use cases include Lidarr music requests, self-hosted music discovery, Jellyfin-backed
 household access, MusicBrainz-powered search, and Docker-based homelab deployments.
@@ -152,7 +153,7 @@ and Redis together.
 
 1. Clone the repo
    ```sh
-   git clone https://github.com/oxon1um/melodarr.git
+   git clone https://github.com/fkurevija/melodarr.git
    cd melodarr
    ```
 
@@ -166,8 +167,9 @@ and Redis together.
    docker compose up -d
    ```
 
-   The included Compose file pins the Melodarr image to `v0.1.0-alpha3`. Update the image tag
-   when upgrading to a newer release.
+   The included Compose file uses the `fkurevija/melodarr:latest` image from Docker Hub. Check
+   the [Docker Hub tags](https://hub.docker.com/r/fkurevija/melodarr/tags) if you prefer to pin
+   a specific release instead of `latest`.
 
    Docker startup runs checked-in Prisma migrations with `prisma migrate deploy`. New installs
    start from an empty database and apply the bundled initial migration automatically.
@@ -296,7 +298,7 @@ docker run --rm \
   --network <melodarr-network> \
   --entrypoint npx \
   -e DATABASE_URL='postgresql://melodarr:melodarr@db:5432/melodarr?schema=public' \
-  ghcr.io/oxon1um/melodarr:v0.1.0-alpha3 \
+  fkurevija/melodarr:latest \
   prisma migrate resolve --applied 20260428100000_init
 ```
 
@@ -366,7 +368,7 @@ same Lidarr instance configured in Melodarr settings.
 <!-- ROADMAP -->
 ## Roadmap
 
-See the [open issues](https://github.com/oxon1um/melodarr/issues) for proposed features
+See the [open issues](https://github.com/fkurevija/melodarr/issues) for proposed features
 and known issues.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -407,14 +409,14 @@ Distributed under the MIT License. See [LICENSE](LICENSE) for details.
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
-[contributors-shield]: https://img.shields.io/github/contributors/oxon1um/melodarr.svg?style=for-the-badge
-[contributors-url]: https://github.com/oxon1um/melodarr/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/oxon1um/melodarr.svg?style=for-the-badge
-[forks-url]: https://github.com/oxon1um/melodarr/network/members
-[stars-shield]: https://img.shields.io/github/stars/oxon1um/melodarr.svg?style=for-the-badge
-[stars-url]: https://github.com/oxon1um/melodarr/stargazers
-[issues-shield]: https://img.shields.io/github/issues/oxon1um/melodarr.svg?style=for-the-badge
-[issues-url]: https://github.com/oxon1um/melodarr/issues
+[contributors-shield]: https://img.shields.io/github/contributors/fkurevija/melodarr.svg?style=for-the-badge
+[contributors-url]: https://github.com/fkurevija/melodarr/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/fkurevija/melodarr.svg?style=for-the-badge
+[forks-url]: https://github.com/fkurevija/melodarr/network/members
+[stars-shield]: https://img.shields.io/github/stars/fkurevija/melodarr.svg?style=for-the-badge
+[stars-url]: https://github.com/fkurevija/melodarr/stargazers
+[issues-shield]: https://img.shields.io/github/issues/fkurevija/melodarr.svg?style=for-the-badge
+[issues-url]: https://github.com/fkurevija/melodarr/issues
 [Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
 [Next-url]: https://nextjs.org/
 [React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
