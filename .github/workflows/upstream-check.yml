@@ -11,7 +11,7 @@ permissions:
 
 env:
   UPSTREAM_URL: https://github.com/oxon1um/melodarr.git
-  UPSTREAM_SLUG: oxon1um/melodarr
+  UPSTREAM_SLUG: oxon1um:melodarr
   UPSTREAM_BRANCH: main
 
 jobs:
