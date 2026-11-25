@@ -10,6 +10,8 @@
 > fork are published to [Docker Hub](https://hub.docker.com/r/fkurevija/melodarr) on every push to
 > `main`.
 
+> **AI Disclosure:** Portions of this codebase, documentation, or tests were generated or refactored with the assistance of AI tools (e.g. GitHub Copilot, Claude, ChatGPT). All AI-generated outputs have been reviewed, tested, and verified by human maintainers.
+
 <!-- PROJECT SHIELDS -->
 [![Contributors][contributors-shield]][contributors-url]
 [![Forks][forks-shield]][forks-url]
