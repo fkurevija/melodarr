@@ -1,4 +1,5 @@
 import { request as httpRequest, type RequestOptions } from "node:http";
+import { type LookupAddress, type LookupOptions } from "node:dns";
 import { request as httpsRequest } from "node:https";
 import { Readable } from "node:stream";
 
@@ -6,8 +7,6 @@ export type ResolvedAddress = {
   address: string;
   family: 4 | 6;
 };
-
-type LookupCallback = (error: NodeJS.ErrnoException | null, address: string, family: number) => void;
 
 type UpstreamResponse = {
   body: ReadableStream<Uint8Array> | null;
@@ -23,10 +22,21 @@ type RequestPinnedUrlInit = {
 const createTimeoutError = (): Error & { status: number } =>
   Object.assign(new Error("Image request timed out"), { status: 504 });
 
-const createPinnedLookup = (resolvedAddress: ResolvedAddress) =>
-  (_hostname: string, _options: object, callback: LookupCallback) => {
+const DEFAULT_HEADERS = { "user-agent": "undici" };
+
+const createPinnedLookup = (resolvedAddress: ResolvedAddress) => {
+  return (
+    _hostname: string,
+    options: LookupOptions | undefined,
+    callback: (err: NodeJS.ErrnoException | null, address: string | LookupAddress[], family?: number) => void
+  ) => {
+    if (options?.all) {
+      callback(null, [{ address: resolvedAddress.address, family: resolvedAddress.family }], resolvedAddress.family);
+      return;
+    }
     callback(null, resolvedAddress.address, resolvedAddress.family);
   };
+};
 
 const createRequestOptions = (
   url: URL,
@@ -68,10 +78,10 @@ export const requestPinnedUrl = async (
   init: RequestPinnedUrlInit = {},
 ): Promise<UpstreamResponse> => {
   const requestImpl = url.protocol === "https:" ? httpsRequest : httpRequest;
-  const { headers, signal } = init;
+  const { signal } = init;
 
   return new Promise<UpstreamResponse>((resolve, reject) => {
-    const request = requestImpl(createRequestOptions(url, resolvedAddress, headers), (response) => {
+    const request = requestImpl(createRequestOptions(url, resolvedAddress, { ...DEFAULT_HEADERS, ...init.headers }), (response) => {
       const status = response.statusCode ?? 502;
       const headers = toHeaders(response.headers);
 
