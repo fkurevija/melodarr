@@ -1,6 +1,10 @@
 import type { NextRequest } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { jsonError, jsonOk } from "@/lib/http";
+import { toSafeApiError } from "@/lib/http/upstream-errors";
+import { isValidForeignId } from "@/lib/search/foreign-id";
+
+const ARTIST_DETAILS_ERROR_MESSAGE = "Artist details are unavailable. Check the server logs for details.";
 import { withOptimizedImageUrls, withOptimizedImageUrlsForMany } from "@/lib/images";
 import { LidarrClient } from "@/lib/lidarr/client";
 import { enforceSearchRateLimit } from "@/lib/search/rate-limit";
@@ -17,8 +21,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ arti
     }
 
     const { artistId } = await params;
-    if (!artistId) {
-      return jsonError("Artist ID is required", 400);
+    if (!isValidForeignId(artistId)) {
+      return jsonError("Invalid artist ID", 400);
     }
 
     const config = await getRuntimeConfig();
@@ -99,7 +103,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ arti
       availableCount
     });
   } catch (error) {
-    const status = (error as { status?: number }).status ?? 500;
-    return jsonError(error instanceof Error ? error.message : "Failed to get artist details", status);
+    const safe = toSafeApiError(error, "Failed to get artist details", ARTIST_DETAILS_ERROR_MESSAGE);
+    return jsonError(safe.message, safe.status);
   }
 }

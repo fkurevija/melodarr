@@ -27,6 +27,7 @@ export async function POST(req: NextRequest) {
     const payload = setupSchema.parse(await req.json());
 
     const passwordHash = await hashPassword(payload.password);
+    await getRuntimeSecret();
 
     const user = await prisma.$transaction(async (tx) => {
       const existingUsers = await tx.user.count();
@@ -44,8 +45,6 @@ export async function POST(req: NextRequest) {
 
       return createdUser;
     });
-
-    await getRuntimeSecret();
 
     const session = await createSession(user.id);
     const response = NextResponse.json({ ok: true });

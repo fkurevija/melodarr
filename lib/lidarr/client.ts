@@ -2028,7 +2028,7 @@ export class LidarrClient {
     const existingArtist = await this.getExistingArtistByForeignId(foreignArtistId);
 
     const [mbidLookupRaw, lookupByExistingName, lookupByRequestedName] = await Promise.all([
-      this.tryRequest<LidarrArtist>(`/api/v1/artist/mbid/${foreignArtistId}`),
+      this.tryRequest<LidarrArtist>(`/api/v1/artist/mbid/${encodeURIComponent(foreignArtistId)}`),
       existingArtist?.artistName ? this.getLookupArtistMatch(foreignArtistId, existingArtist.artistName) : Promise.resolve(null),
       artistName && artistName !== existingArtist?.artistName ? this.getLookupArtistMatch(foreignArtistId, artistName) : Promise.resolve(null)
     ]);
@@ -2255,7 +2255,7 @@ export class LidarrClient {
 
     // Try /api/v1/tracks endpoint with albumId
     if (albumId) {
-      const tracksResponse = await this.tryRequest<unknown[]>(`/api/v1/track?albumId=${albumId}`);
+      const tracksResponse = await this.tryRequest<unknown[]>(`/api/v1/track?albumId=${encodeURIComponent(String(albumId))}`);
 
       if (tracksResponse && tracksResponse.length > 0) {
         const tracks = tracksResponse
@@ -2400,7 +2400,7 @@ export class LidarrClient {
         const index = cursor;
         cursor += 1;
         const albumId = uniqueAlbumIds[index];
-        const trackfiles = await this.tryRequest<unknown[]>(`/api/v1/trackfile?albumId=${albumId}`);
+        const trackfiles = await this.tryRequest<unknown[]>(`/api/v1/trackfile?albumId=${encodeURIComponent(String(albumId))}`);
         counts[index] = [albumId, trackfiles?.length ?? 0];
       }
     };
@@ -2501,7 +2501,7 @@ export class LidarrClient {
       return null;
     }
 
-    return this.tryRequest<LidarrArtist>(`/api/v1/artist/${artistId}`);
+    return this.tryRequest<LidarrArtist>(`/api/v1/artist/${encodeURIComponent(String(artistId))}`);
   }
 
   async getAlbumById(albumId: number): Promise<LidarrAlbum | null> {
@@ -2509,7 +2509,7 @@ export class LidarrClient {
       return null;
     }
 
-    return this.tryRequest<LidarrAlbum>(`/api/v1/album/${albumId}`);
+    return this.tryRequest<LidarrAlbum>(`/api/v1/album/${encodeURIComponent(String(albumId))}`);
   }
 
   albumNeedsFileCountFallback(album: { statistics?: LidarrAlbumStatistics | undefined }): boolean {
@@ -2534,7 +2534,7 @@ export class LidarrClient {
       return [];
     }
 
-    const payload = await this.tryRequest<unknown[]>(`/api/v1/album?artistId=${artistId}`);
+    const payload = await this.tryRequest<unknown[]>(`/api/v1/album?artistId=${encodeURIComponent(String(artistId))}`);
     return (payload ?? [])
       .map((entry) => normalizeArtistAlbum(entry))
       .filter((entry): entry is LidarrArtistAlbum => Boolean(entry))
@@ -2689,7 +2689,7 @@ export class LidarrClient {
 
   async deleteAlbum(albumId: number, deleteFiles: boolean = true): Promise<void> {
     await this.request<Record<string, unknown>>(
-      `/api/v1/album/${albumId}?deleteFiles=${deleteFiles ? "true" : "false"}&addImportListExclusion=false`,
+      `/api/v1/album/${encodeURIComponent(String(albumId))}?deleteFiles=${deleteFiles ? "true" : "false"}&addImportListExclusion=false`,
       {
         method: "DELETE"
       }
@@ -2699,7 +2699,7 @@ export class LidarrClient {
 
   async deleteArtist(artistId: number, deleteFiles: boolean = true): Promise<void> {
     await this.request<Record<string, unknown>>(
-      `/api/v1/artist/${artistId}?deleteFiles=${deleteFiles ? "true" : "false"}&addImportListExclusion=false`,
+      `/api/v1/artist/${encodeURIComponent(String(artistId))}?deleteFiles=${deleteFiles ? "true" : "false"}&addImportListExclusion=false`,
       {
         method: "DELETE"
       }

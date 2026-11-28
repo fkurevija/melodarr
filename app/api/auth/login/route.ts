@@ -2,11 +2,12 @@ import { Role } from "@prisma/client";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { isAppInitialized } from "@/lib/app-state";
-import { enforceLoginRateLimit } from "@/lib/auth/login-rate-limit";
+import { enforceLoginRateLimit, enforcePreParseRateLimit } from "@/lib/auth/login-rate-limit";
 import { createSession, attachSessionCookie } from "@/lib/auth/session";
 import { verifyPassword } from "@/lib/auth/password";
 import { prisma } from "@/lib/db/prisma";
 import { jsonError } from "@/lib/http";
+import { validateMutationRequest } from "@/lib/http/mutation-guard";
 import { isHttpsRequest } from "@/lib/http/protocol";
 import { authenticateWithJellyfin } from "@/lib/jellyfin/client";
 import { getRuntimeSecret } from "@/lib/runtime/secret";
@@ -66,6 +67,14 @@ const upsertJellyfinUser = async (input: { userId: string; username: string }) =
 
 export async function POST(req: NextRequest) {
   try {
+    const blocked = await validateMutationRequest(req);
+    if (blocked) return blocked;
+
+    const preParseLimit = await enforcePreParseRateLimit(req);
+    if (!preParseLimit.allowed) {
+      return jsonError(`Too many login attempts. Retry in ${preParseLimit.retryAfterSec}s`, 429);
+    }
+
     const initialized = await isAppInitialized();
     if (!initialized) {
       return jsonError("Setup is required before sign in", 409);
