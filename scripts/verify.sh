@@ -39,7 +39,7 @@ export SESSION_SECRET="${SESSION_SECRET:-verify-session-secret-with-enough-entro
 
 npm run lint
 npm run prisma:generate
-npm run test
+npm run test -- --coverage
 npm run prisma:push
 npm run build
 npm run test:e2e
