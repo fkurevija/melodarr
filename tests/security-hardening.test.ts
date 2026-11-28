@@ -19,8 +19,6 @@ vi.mock("@/lib/runtime/app-config", () => ({ getEffectiveAppUrl, getStoredRuntim
 vi.mock("@/lib/db/prisma", () => ({ prisma: { appConfig: { upsert } } }));
 
 import { validateMutationRequest } from "../lib/http/mutation-guard";
-import { enforcePreParseRateLimit } from "../lib/auth/login-rate-limit";
-import { getRuntimeSecret } from "../lib/runtime/secret";
 import { toSafeApiError } from "../lib/http/upstream-errors";
 import { isValidForeignId } from "../lib/search/foreign-id";
 

@@ -6,6 +6,7 @@ const prismaRequest = {
   findMany: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
+  updateMany: vi.fn(),
   findUnique: vi.fn()
 };
 
@@ -211,13 +212,7 @@ describe("request service", () => {
         lidarrAlbumId: 99
       }
     ]);
-    prismaRequest.update.mockImplementation(async ({ where, data }: {
-      where: { id: string };
-      data: Record<string, unknown>;
-    }) => ({
-      id: where.id,
-      ...data
-    }));
+    prismaRequest.updateMany.mockResolvedValue({ count: 1 });
 
     getRuntimeConfig.mockResolvedValue({
       lidarrUrl: "http://lidarr",
@@ -241,8 +236,8 @@ describe("request service", () => {
     expect(clientInstance.isAlbumFullyAvailable).toHaveBeenCalledWith(
       expect.objectContaining({ id: 99 })
     );
-    expect(prismaRequest.update).toHaveBeenCalledWith({
-      where: { id: "request-3" },
+    expect(prismaRequest.updateMany).toHaveBeenCalledWith({
+      where: { id: "request-3", status: RequestStatus.SUBMITTED },
       data: {
         status: RequestStatus.COMPLETED,
         failureReason: null
