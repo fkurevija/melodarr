@@ -3,14 +3,13 @@ import { requireUser } from "@/lib/auth/session";
 import { jsonError, jsonOk } from "@/lib/http";
 import { toSafeApiError } from "@/lib/http/upstream-errors";
 import { isValidForeignId } from "@/lib/search/foreign-id";
+import { normalizeText } from "@/lib/search/text";
 
 const ARTIST_DETAILS_ERROR_MESSAGE = "Artist details are unavailable. Check the server logs for details.";
 import { withOptimizedImageUrls, withOptimizedImageUrlsForMany } from "@/lib/images";
 import { LidarrClient } from "@/lib/lidarr/client";
 import { enforceSearchRateLimit } from "@/lib/search/rate-limit";
 import { getRuntimeConfig } from "@/lib/settings/store";
-
-const normalizeText = (value: string | undefined) => value?.trim().toLowerCase() ?? "";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ artistId: string }> }) {
   try {

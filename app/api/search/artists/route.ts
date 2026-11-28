@@ -2,12 +2,12 @@ import { NextRequest } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { jsonError, jsonOk } from "@/lib/http";
 import { toSafeApiError } from "@/lib/http/upstream-errors";
+import { normalizeText } from "@/lib/search/text";
 import { withOptimizedImageUrlsForMany } from "@/lib/images";
 import { LidarrClient } from "@/lib/lidarr/client";
 import { enforceSearchRateLimit } from "@/lib/search/rate-limit";
 import { getRuntimeConfig } from "@/lib/settings/store";
 
-const normalizeText = (value: string | undefined) => value?.trim().toLowerCase() ?? "";
 const LIDARR_SEARCH_ERROR_MESSAGE = "Lidarr search failed. Check Lidarr logs for details.";
 
 type AlbumWithStatus = {

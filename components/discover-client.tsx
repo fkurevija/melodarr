@@ -15,6 +15,7 @@ import {
   type ReleaseSort,
   sortReleases
 } from "@/lib/discover/release-browser";
+import { DEFAULT_RELEASE_SORT } from "@/lib/search/text";
 import { pickPreferredImageUrl, type ImageAsset } from "@/lib/image-selection";
 import { useProgressiveCount } from "@/lib/use-progressive-count";
 import { withBasePath } from "@/lib/navigation/base-path";
@@ -89,7 +90,6 @@ const emptyResults: DiscoveryResults = {
   singles: []
 };
 
-const DEFAULT_RELEASE_SORT: ReleaseSort = "newest";
 const DISCOVER_RELEASE_GRID_CLASS_NAME =
   "grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,20rem),1fr))]";
 const DISCOVER_RELEASE_CARD_CLASS_NAME =
