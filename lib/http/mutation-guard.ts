@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { env } from "@/lib/env";
 import { jsonError } from "@/lib/http";
 import { getEffectiveAppUrl } from "@/lib/runtime/app-config";
 
@@ -89,7 +90,7 @@ export const validateMutationRequest = async (
   const allowedOrigins = new Set([
     await getAllowedOrigin(),
     getRequestUrlOrigin(req.url),
-    ...getHeaderOrigins(req.headers, requestOrigin)
+    ...(env.trustedProxy ? getHeaderOrigins(req.headers, requestOrigin) : [])
   ].filter((origin): origin is string => Boolean(origin)));
 
   if (!allowedOrigins.has(requestOrigin)) {

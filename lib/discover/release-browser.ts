@@ -14,7 +14,7 @@ export const RELEASE_SORT_OPTIONS: Array<{ value: ReleaseSort; label: string }> 
   { value: "za", label: "Alphabetical Z-A" }
 ];
 
-const normalizeText = (value?: string | null) => value?.trim().toLowerCase() ?? "";
+import { normalizeText } from "@/lib/search/text";
 
 const getReleaseTimestamp = (releaseDate?: string) => {
   if (!releaseDate) {

@@ -14,6 +14,7 @@ import {
   type ReleaseSort,
   sortReleases
 } from "@/lib/discover/release-browser";
+import { DEFAULT_RELEASE_SORT } from "@/lib/search/text";
 import { pickPreferredImageUrl, type ImageAsset } from "@/lib/image-selection";
 import { getSafeReturnPath } from "@/lib/navigation/return-path";
 import { withBasePath } from "@/lib/navigation/base-path";
@@ -64,7 +65,6 @@ const chooseImage = (images?: ImageAsset[]) => {
 const albumKey = (album: { foreignAlbumId?: string; title: string }) =>
   album.foreignAlbumId ?? album.title;
 
-const DEFAULT_RELEASE_SORT: ReleaseSort = "newest";
 const ARTIST_RELEASE_GRID_CLASS_NAME =
   "grid gap-4 [grid-template-columns:repeat(auto-fit,minmax(min(100%,16rem),1fr))]";
 const RELEASE_TILE_TITLE_CLASS_NAME =

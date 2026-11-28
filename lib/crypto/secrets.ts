@@ -8,6 +8,8 @@ const getKey = async (): Promise<Buffer> => {
   return createHash("sha256").update(secret).digest();
 };
 
+const PAYLOAD_VERSION = "v1";
+
 export const encryptText = async (plainText: string): Promise<string> => {
   const key = await getKey();
   const iv = randomBytes(12);
@@ -15,11 +17,21 @@ export const encryptText = async (plainText: string): Promise<string> => {
   const encrypted = Buffer.concat([cipher.update(plainText, "utf8"), cipher.final()]);
   const authTag = cipher.getAuthTag();
 
-  return [iv.toString("base64"), authTag.toString("base64"), encrypted.toString("base64")].join(":");
+  return [PAYLOAD_VERSION, iv.toString("base64"), authTag.toString("base64"), encrypted.toString("base64")].join(":");
 };
 
 export const decryptText = async (encryptedText: string): Promise<string> => {
-  const [ivB64, authTagB64, dataB64] = encryptedText.split(":");
+  const parts = encryptedText.split(":");
+  if (parts.length !== 3 && parts.length !== 4) {
+    throw new Error("Invalid encrypted payload format");
+  }
+
+  const version = parts.length === 4 ? parts[0] : "legacy";
+  if (version !== PAYLOAD_VERSION && version !== "legacy") {
+    throw new Error(`Unsupported encrypted payload version: ${version}`);
+  }
+
+  const [ivB64, authTagB64, dataB64] = parts.length === 4 ? parts.slice(1) : parts;
   if (!ivB64 || !authTagB64 || !dataB64) {
     throw new Error("Invalid encrypted payload format");
   }

@@ -62,6 +62,7 @@
         <li><a href="#environment-variables">Environment Variables</a></li>
       </ul>
     </li>
+    <li><a href="#security">Security</a></li>
     <li><a href="#usage">Usage</a></li>
     <li><a href="#development">Development</a></li>
     <li><a href="#roadmap">Roadmap</a></li>
@@ -243,6 +244,15 @@ subpath; set the runtime env var to choose.
 
 
 <!-- USAGE EXAMPLES -->
+
+## Security
+
+Melodarr runs as a single-user (admin + household users) self-hosted app behind your reverse proxy. Keep these settings in mind:
+
+* **`TRUSTED_PROXY=true`** only when the app sits behind a trusted reverse proxy that strips or sets `X-Forwarded-*` headers itself. Otherwise forwarded headers are ignored for CSRF origin checks.
+* **`SESSION_SECRET`** must stay secret: it encrypts the Jellyfin and Lidarr API keys stored in the database. Restoring or rotating it without the previous value invalidates the stored keys.
+* The image proxy (`/api/image`) signs outgoing links server-side and only fetches signed URLs; remote artwork is never served as active content.
+
 ## Usage
 
 After the first-run setup wizard:

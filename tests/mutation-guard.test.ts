@@ -1,11 +1,19 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { validateMutationRequest } from "../lib/http/mutation-guard";
 import { getEffectiveAppUrl } from "@/lib/runtime/app-config";
 
+const { trustedProxyState } = vi.hoisted(() => ({ trustedProxyState: { value: false } }));
+
+vi.mock("@/lib/env", () => ({
+  env: { get trustedProxy() { return trustedProxyState.value; } }
+}));
+
 vi.mock("@/lib/runtime/app-config", () => ({
   getEffectiveAppUrl: vi.fn(async () => "https://melodarr.example.com")
 }));
+
+beforeEach(() => { trustedProxyState.value = false; });
 
 const request = (input: { method: string; headers?: Record<string, string> }) => ({
   method: input.method,
@@ -63,6 +71,7 @@ describe("validateMutationRequest", () => {
   });
 
   it("allows same-origin mutations through forwarded proxy headers", async () => {
+    trustedProxyState.value = true;
     vi.mocked(getEffectiveAppUrl).mockResolvedValueOnce("https://configured.example.com");
 
     await expect(
@@ -81,6 +90,7 @@ describe("validateMutationRequest", () => {
   });
 
   it("allows forwarded hosts when the request origin provides the protocol", async () => {
+    trustedProxyState.value = true;
     vi.mocked(getEffectiveAppUrl).mockResolvedValueOnce("https://configured.example.com");
 
     await expect(
@@ -97,6 +107,7 @@ describe("validateMutationRequest", () => {
   });
 
   it("allows proxy header lists by using the first forwarded origin values", async () => {
+    trustedProxyState.value = true;
     vi.mocked(getEffectiveAppUrl).mockResolvedValueOnce("https://configured.example.com");
 
     await expect(

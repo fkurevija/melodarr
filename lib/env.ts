@@ -25,7 +25,8 @@ export const env = {
   lidarrQualityProfileId: toInt(process.env.LIDARR_QUALITY_PROFILE_ID),
   lidarrMetadataProfileId: toInt(process.env.LIDARR_METADATA_PROFILE_ID),
   lidarrMonitorMode: process.env.LIDARR_MONITOR_MODE,
-  requestAutoApprove: toBool(process.env.REQUEST_AUTO_APPROVE)
+  requestAutoApprove: toBool(process.env.REQUEST_AUTO_APPROVE),
+  trustedProxy: toBool(process.env.TRUSTED_PROXY) ?? false
 };
 
 export const isProduction = env.nodeEnv === "production";

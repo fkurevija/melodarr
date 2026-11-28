@@ -19,7 +19,6 @@ const FALLBACK_IMAGE_CONTENT_TYPES = new Map<string, string>([
   [".jpeg", "image/jpeg"],
   [".jpg", "image/jpeg"],
   [".png", "image/png"],
-  [".svg", "image/svg+xml"],
   [".webp", "image/webp"],
 ]);
 
@@ -269,6 +268,9 @@ const getFallbackImageContentType = (url: URL): string | undefined => {
 
 const getSafeImageContentType = (contentType: string | null, url: URL): string | null => {
   const normalizedContentType = contentType?.split(";", 1)[0]?.trim().toLowerCase();
+  if (normalizedContentType === "image/svg+xml") {
+    return null;
+  }
   if (normalizedContentType?.startsWith("image/")) {
     return contentType ?? normalizedContentType;
   }
@@ -345,26 +347,6 @@ const getUpstreamImageHeaders = (
   return undefined;
 };
 
-const toUpstreamImageResponse = (response: Response): UpstreamImageResponse => ({
-  body: response.body,
-  headers: response.headers,
-  status: response.status,
-});
-
-const fetchPublicImageResponse = async (
-  url: URL,
-  headers: Record<string, string> | undefined,
-  signal?: AbortSignal,
-): Promise<UpstreamImageResponse> => {
-  const response = await fetch(url, {
-    headers,
-    redirect: "manual",
-    signal,
-  });
-
-  return toUpstreamImageResponse(response);
-};
-
 const requestSafePinnedResponse = async (
   url: URL,
   resolvedAddresses: ResolvedAddress[],
@@ -373,10 +355,6 @@ const requestSafePinnedResponse = async (
 ): Promise<UpstreamImageResponse> => {
   let lastError: unknown;
   const headers = getUpstreamImageHeaders(url, context);
-
-  if (!isAllowedPrivateImageOrigin(url, context.allowedPrivateOrigins)) {
-    return fetchPublicImageResponse(url, headers, signal);
-  }
 
   for (const resolvedAddress of resolvedAddresses) {
     try {

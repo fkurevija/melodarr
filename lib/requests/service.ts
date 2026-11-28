@@ -98,11 +98,6 @@ const positiveNumber = (value?: number | null) =>
 const nonEmptyText = (value?: string | null) =>
   typeof value === "string" && value.trim().length > 0 ? value : undefined;
 
-const asRecord = (value: unknown): Record<string, unknown> | null =>
-  value && typeof value === "object" && !Array.isArray(value)
-    ? value as Record<string, unknown>
-    : null;
-
 const toInputJsonValue = (value: unknown): Prisma.InputJsonValue =>
   JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 
@@ -138,26 +133,6 @@ const matchesRequestedAlbum = (
   return sameTitle && sameArtist && sameForeignArtist;
 };
 
-const pickResponseId = (payload: unknown, ...keys: string[]) => {
-  const item = asRecord(payload);
-  if (!item) return undefined;
-
-  for (const key of keys) {
-    const value = item[key];
-    if (typeof value === "number" && value > 0) {
-      return value;
-    }
-  }
-
-  return undefined;
-};
-
-const pickNestedResponseId = (payload: unknown, nestedKey: string, ...keys: string[]) => {
-  const item = asRecord(payload);
-  if (!item) return undefined;
-
-  return pickResponseId(item[nestedKey], ...keys);
-};
 
 const resolveRequestedAlbum = async (
   client: LidarrClient,
@@ -275,19 +250,22 @@ export const syncSubmittedAlbumRequests = async () => {
   const completedRequestIds: string[] = [];
 
   for (const request of requestsToCheck) {
-    const isCompleted = await isRequestAlbumCompleted(client, request);
-    if (!isCompleted) {
-      continue;
-    }
-
-    await prisma.request.update({
-      where: { id: request.id },
-      data: {
-        status: RequestStatus.COMPLETED,
-        failureReason: null
+    try {
+      const isCompleted = await isRequestAlbumCompleted(client, request);
+      if (!isCompleted) {
+        continue;
       }
-    });
-    completedRequestIds.push(request.id);
+
+      const updated = await prisma.request.updateMany({
+        where: { id: request.id, status: RequestStatus.SUBMITTED },
+        data: { status: RequestStatus.COMPLETED, failureReason: null }
+      });
+      if (updated.count === 1) {
+        completedRequestIds.push(request.id);
+      }
+    } catch {
+      // Isolate per-row failures so one Lidarr error cannot block later rows.
+    }
   }
 
   return completedRequestIds;
@@ -305,10 +283,10 @@ export const syncSubmittedAlbumRequestsIfStale = async () => {
 
   submittedAlbumRequestSyncPromise = syncSubmittedAlbumRequests()
     .then((result) => {
-      lastSubmittedAlbumRequestSyncAt = Date.now();
       return result;
     })
     .finally(() => {
+      lastSubmittedAlbumRequestSyncAt = Date.now();
       submittedAlbumRequestSyncPromise = null;
     });
 
@@ -427,19 +405,17 @@ export const deleteRequestFromLidarr = async (requestId: string) => {
   }
 
   const { client } = await getLidarrClientOrThrow();
-  const responsePayload = asRecord(request.lidarrResponse);
-  const requestArtistPayload = asRecord(responsePayload?.artist);
 
   if (request.requestType === RequestType.ALBUM) {
-    const album = (request.lidarrAlbumId
-      ? await client.getAlbumById(request.lidarrAlbumId)
-      : null)
-      ?? (pickResponseId(responsePayload, "id") ? await client.getAlbumById(pickResponseId(responsePayload, "id")!) : null)
-      ?? (request.foreignAlbumId ? await client.getExistingAlbumByForeignId(request.foreignAlbumId) : null);
-
-    if (album?.id) {
-      await client.deleteAlbum(album.id, true);
+    const album = request.lidarrAlbumId ? await client.getAlbumById(request.lidarrAlbumId) : null;
+    if (!album) {
+      throw new Error("Lidarr album not found for this request");
     }
+    if (request.foreignAlbumId && album.foreignAlbumId !== request.foreignAlbumId) {
+      throw new Error("Lidarr album does not match this request");
+    }
+
+    await client.deleteAlbum(album.id, true);
 
     return prisma.request.update({
       where: { id: requestId },
@@ -452,28 +428,25 @@ export const deleteRequestFromLidarr = async (requestId: string) => {
     });
   }
 
-  const artist = (request.lidarrArtistId
-    ? await client.getArtistById(request.lidarrArtistId)
-    : null)
-    ?? (pickResponseId(responsePayload, "id") ? await client.getArtistById(pickResponseId(responsePayload, "id")!) : null)
-    ?? (pickNestedResponseId(responsePayload, "artist", "id") ? await client.getArtistById(pickNestedResponseId(responsePayload, "artist", "id")!) : null)
-    ?? (request.foreignArtistId ? await client.getExistingArtistByForeignId(request.foreignArtistId) : null)
-    ?? (pickResponseId(requestArtistPayload, "id") ? await client.getArtistById(pickResponseId(requestArtistPayload, "id")!) : null)
-    ?? (request.foreignArtistId ? await client.getArtistByForeignId(request.foreignArtistId, request.artistName) : null);
+  const artist = request.lidarrArtistId ? await client.getArtistById(request.lidarrArtistId) : null;
+    if (!artist) {
+      throw new Error("Lidarr artist not found for this request");
+    }
+    if (request.foreignArtistId && artist.foreignArtistId !== request.foreignArtistId) {
+      throw new Error("Lidarr artist does not match this request");
+    }
 
-  if (artist?.id) {
     await client.deleteArtist(artist.id, true);
-  }
 
-  return prisma.request.update({
-    where: { id: requestId },
+    return prisma.request.update({
+      where: { id: requestId },
       data: {
         lidarrArtistId: null,
         lidarrAlbumId: null,
         lidarrResponse: Prisma.JsonNull,
         failureReason: null
       }
-  });
+    });
 };
 
 const createPendingArtistRequest = async (input: CreateArtistRequestInput) => {
@@ -622,14 +595,13 @@ export const approvePendingRequest = async (requestId: string) => {
     throw new Error("Request not found");
   }
 
-  if (request.status !== RequestStatus.PENDING) {
-    return request;
-  }
-
-  await prisma.request.update({
-    where: { id: requestId },
+  const approved = await prisma.request.updateMany({
+    where: { id: requestId, status: RequestStatus.PENDING },
     data: { status: RequestStatus.APPROVED }
   });
+  if (approved.count === 0) {
+    return request;
+  }
 
   try {
     if (request.requestType === RequestType.ALBUM) {

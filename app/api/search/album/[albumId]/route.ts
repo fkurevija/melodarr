@@ -1,6 +1,10 @@
 import type { NextRequest } from "next/server";
 import { requireUser } from "@/lib/auth/session";
 import { jsonError, jsonOk } from "@/lib/http";
+import { toSafeApiError } from "@/lib/http/upstream-errors";
+import { isValidForeignId } from "@/lib/search/foreign-id";
+
+const ALBUM_DETAILS_ERROR_MESSAGE = "Album details are unavailable. Check the server logs for details.";
 import { withOptimizedImageUrls } from "@/lib/images";
 import { LidarrClient } from "@/lib/lidarr/client";
 import { enforceSearchRateLimit } from "@/lib/search/rate-limit";
@@ -15,8 +19,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ albu
     }
 
     const { albumId } = await params;
-    if (!albumId) {
-      return jsonError("Album ID is required", 400);
+    if (!isValidForeignId(albumId)) {
+      return jsonError("Invalid album ID", 400);
     }
 
     const config = await getRuntimeConfig();
@@ -49,7 +53,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ albu
         : false
     });
   } catch (error) {
-    const status = (error as { status?: number }).status ?? 500;
-    return jsonError(error instanceof Error ? error.message : "Failed to get album details", status);
+    const safe = toSafeApiError(error, "Failed to get album details", ALBUM_DETAILS_ERROR_MESSAGE);
+    return jsonError(safe.message, safe.status);
   }
 }

@@ -145,6 +145,14 @@ describe("GET /api/image", () => {
         })
       })
     );
+    httpsRequestMock.mockImplementation(
+      createRequestMock({
+        response: createUpstreamResponse("image-bytes", {
+          status: 200,
+          headers: { "content-type": "image/jpeg" }
+        })
+      })
+    );
     fetchMock.mockResolvedValue(
       new Response("image-bytes", {
         status: 200,
@@ -153,7 +161,7 @@ describe("GET /api/image", () => {
     );
   });
 
-  it("proxies a valid signed public image through a safe fetch path", async () => {
+  it("proxies a valid signed public image through a DNS-pinned request", async () => {
     verifySignedImageParams.mockResolvedValue("https://images.example/stromae.jpg");
 
     const { GET } = await import("../app/api/image/route");
@@ -161,13 +169,11 @@ describe("GET /api/image", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledWith(
-      new URL("https://images.example/stromae.jpg"),
-      expect.objectContaining({
-        redirect: "manual",
-        signal: expect.any(AbortSignal)
-      })
+    expect(httpsRequestMock).toHaveBeenCalledWith(
+      expect.objectContaining({ hostname: "images.example", lookup: expect.any(Function) }),
+      expect.any(Function)
     );
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(await response.text()).toBe("image-bytes");
   });
 
@@ -402,10 +408,12 @@ describe("GET /api/image", () => {
 
   it("rejects non-image upstream responses", async () => {
     verifySignedImageParams.mockResolvedValue("https://images.example/not-an-image");
-    fetchMock.mockResolvedValue(
-      new Response("html", {
-        status: 200,
-        headers: { "content-type": "text/html; charset=utf-8" }
+    httpsRequestMock.mockImplementation(
+      createRequestMock({
+        response: createUpstreamResponse("html", {
+          status: 200,
+          headers: { "content-type": "text/html; charset=utf-8" }
+        })
       })
     );
 
@@ -419,7 +427,7 @@ describe("GET /api/image", () => {
 
   it("hides upstream fetch errors from clients", async () => {
     verifySignedImageParams.mockResolvedValue("https://images.example/failure.jpg");
-    fetchMock.mockRejectedValue(new Error("socket hang up"));
+    httpsRequestMock.mockImplementation(createRequestMock({ error: new Error("socket hang up") }));
 
     const { GET } = await import("../app/api/image/route");
     const request = new NextRequest("http://localhost:3000/api/image?src=ok&exp=1&sig=ok");
@@ -429,7 +437,7 @@ describe("GET /api/image", () => {
     await expect(response.json()).resolves.toEqual({ error: "Failed to load image" });
   });
 
-  it("proxies public remote artwork URLs without the pinned request path", async () => {
+  it("proxies public remote artwork URLs through the pinned request path", async () => {
     verifySignedImageParams.mockResolvedValue(
       "https://images.lidarr.audio/cache/https://coverartarchive.org/release/fc4ca5a7-ac12-4a30-92db-6c44c971349a/42537485144-1200.jpg"
     );
@@ -446,8 +454,25 @@ describe("GET /api/image", () => {
     const response = await GET(request);
 
     expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(httpsRequestMock).not.toHaveBeenCalled();
+    expect(httpsRequestMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).not.toHaveBeenCalled();
     expect(await response.text()).toBe("image-bytes");
+  });
+it("refuses to proxy active SVG documents", async () => {
+    verifySignedImageParams.mockResolvedValue("https://images.example/vector.svg");
+    httpsRequestMock.mockImplementation(
+      createRequestMock({
+        response: createUpstreamResponse("<svg onload=alert(1)>", {
+          status: 200,
+          headers: { "content-type": "image/svg+xml" }
+        })
+      })
+    );
+
+    const { GET } = await import("../app/api/image/route");
+    const request = new NextRequest("http://localhost:3000/api/image?src=ok&exp=1&sig=ok");
+    const response = await GET(request);
+
+    expect(response.status).toBe(415);
   });
 });
